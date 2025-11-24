@@ -1,0 +1,34 @@
+id: test_flow
+namespace: shopzada.team
+
+tasks:
+  - id: BusinessDept
+    type: io.kestra.plugin.scripts.python.Script
+    beforeCommands:
+      - pip install pandas
+      - pip install openpyxl
+      - pip install pyarrow
+    namespaceFiles:
+      enabled: True
+      include:
+        - dataframe.py
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    outputFiles:
+      - "product_list.parquet"
+    script: |
+      from dataframe import set_frame, append_files
+      import pandas as pd
+      import glob
+      import pickle
+      import os
+      
+      product_list = glob.glob("/dataset/BusinessDepartment/product_list*")
+      product_list.sort()
+      df = set_frame(product_list[0])
+
+      if len(product_list) > 1:
+        credit_card.pop(0)
+        df = append_files(df, product_list)
+
+      df.to_parquet('product_list.parquet')
