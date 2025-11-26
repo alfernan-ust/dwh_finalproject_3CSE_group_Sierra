@@ -1,0 +1,43 @@
+id: load_facts
+namespace: shopzada.team
+
+tasks:
+  - id: LoadFactOrders
+    type: io.kestra.plugin.scripts.python.Commands
+    beforeCommands:
+      - pip install pandas pyarrow psycopg2-binary
+    namespaceFiles:
+      enabled: true
+      include:
+        - /opt/kestra/workspace/load_fact_orders.py
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /opt/kestra/workspace/load_fact_orders.py
+
+  - id: LoadFactCampaignTransactions
+    type: io.kestra.plugin.scripts.python.Commands
+    beforeCommands:
+      - pip install pandas pyarrow psycopg2-binary
+    namespaceFiles:
+      enabled: true
+      include:
+        - /opt/kestra/workspace/load_fact_campaign_transactions.py
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /opt/kestra/workspace/load_fact_campaign_transactions.py
+
+
+  - id: LoadFactLineItems
+    type: io.kestra.plugin.scripts.python.Commands
+    beforeCommands:
+      - pip install pandas pyarrow psycopg2-binary
+    namespaceFiles:
+      enabled: true
+      include:
+        - /opt/kestra/workspace/load_fact_line_items.py
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /opt/kestra/workspace/load_fact_line_items.py

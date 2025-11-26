@@ -1,0 +1,111 @@
+id: test_flow
+namespace: shopzada.team
+
+tasks:
+  - id: Extract
+    type: io.kestra.plugin.core.flow.Parallel
+    tasks:
+      - id: BusinessDept
+        type: io.kestra.plugin.scripts.python.Commands
+        beforeCommands:
+          - pip install pandas
+          - pip install openpyxl
+          - pip install pyarrow
+        namespaceFiles:
+          enabled: True
+          include:
+            - dataframe.py
+            - business.py
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        outputFiles:
+          - "product_list.parquet"
+        commands:
+          - python business.py
+
+      - id: CustomerManagementDept
+        type: io.kestra.plugin.scripts.python.Commands
+        beforeCommands:
+          - pip install pandas 
+          - pip install pyarrow
+        namespaceFiles:
+          enabled: True
+          include:
+            - dataframe.py
+            - customer_management.py
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        outputFiles:
+          - credit_card.parquet
+          - user_data.parquet
+          - user_job.parquet
+        commands:
+          - python customer_management.py
+
+      - id: EnterpriseDepartment
+        type: io.kestra.plugin.scripts.python.Commands
+        beforeCommands:
+          - pip install pandas 
+          - pip install pyarrow
+          - pip install bs4
+          - pip install lxml
+          - pip install html5lib
+        namespaceFiles:
+          enabled: True
+          include:
+            - dataframe.py
+            - enterprise.py
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        outputFiles:
+          - merchant_data.parquet
+          - order_merchant_data.parquet
+          - staff_data.parquet
+        commands:
+          - python enterprise.py
+
+      - id: MarketingDepartment
+        type: io.kestra.plugin.scripts.python.Commands
+        beforeCommands:
+          - pip install pandas 
+          - pip install pyarrow
+          - pip install bs4
+          - pip install lxml
+          - pip install html5lib
+        namespaceFiles:
+          enabled: True
+          include:
+            - dataframe.py
+            - marketing.py
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        outputFiles:
+          - campaign_data.parquet
+          - transactional_campaign_data.parquet
+        commands:
+          - python marketing.py
+
+      - id: OperationsDepartment
+        type: io.kestra.plugin.scripts.python.Commands
+        beforeCommands:
+          - pip install pandas
+          - pip install bs4
+          - pip install lxml
+          - pip install html5lib
+          - pip install openpyxl
+        namespaceFiles:
+          enabled: True
+          include:
+            - dataframe.py
+            - operations.py
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        outputFiles:
+          - line_item_data_prices.parquet
+          - line_item_data_products.parquet
+          - output_order_data.parquet
+          - order_delays.parquet
+        commands:
+          - python operations.py
+                      
+

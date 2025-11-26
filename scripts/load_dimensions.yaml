@@ -1,0 +1,68 @@
+id: load_dimensions
+namespace: shopzada.team
+
+tasks:
+  - id: LoadProductDim
+    type: io.kestra.plugin.scripts.python.Commands
+    beforeCommands:
+      - pip install pandas pyarrow psycopg2-binary
+    namespaceFiles:
+      enabled: true
+      include:
+        - /opt/kestra/workspace/load_dim_product.py
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /opt/kestra/workspace/load_dim_product.py
+
+  - id: LoadCustomerDim
+    type: io.kestra.plugin.scripts.python.Commands
+    beforeCommands:
+      - pip install pandas pyarrow psycopg2-binary
+    namespaceFiles:
+      enabled: true
+      include:
+        - /opt/kestra/workspace/load_dim_customer.py
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /opt/kestra/workspace/load_dim_customer.py
+
+  - id: LoadMerchantDim
+    type: io.kestra.plugin.scripts.python.Commands
+    beforeCommands:
+      - pip install pandas pyarrow psycopg2-binary
+    namespaceFiles:
+      enabled: true
+      include:
+        - /opt/kestra/workspace/load_dim_merchant.py
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /opt/kestra/workspace/load_dim_merchant.py
+
+  - id: LoadStaffDim
+    type: io.kestra.plugin.scripts.python.Commands
+    beforeCommands:
+      - pip install pandas pyarrow psycopg2-binary
+    namespaceFiles:
+      enabled: true
+      include:
+        - /opt/kestra/workspace/load_dim_staff.py
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /opt/kestra/workspace/load_dim_staff.py
+
+  - id: LoadCampaignDim
+    type: io.kestra.plugin.scripts.python.Commands
+    beforeCommands:
+      - pip install pandas pyarrow psycopg2-binary
+    namespaceFiles:
+      enabled: true
+      include:
+        - /opt/kestra/workspace/load_dim_campaign.py
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /opt/kestra/workspace/load_dim_campaign.py
