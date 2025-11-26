@@ -1,0 +1,15 @@
+# Start from the official Kestra image
+FROM kestra/kestra:latest
+
+# Switch to root to install packages
+USER root
+
+# Install Python packages needed for ETL
+RUN pip install pandas pyarrow psycopg2-binary openpyxl
+
+# Download and install Kestra Docker Runner plugin
+RUN curl -L https://repo.kestra.io/plugins/kestra-plugins-scripts-runner-docker-latest.jar \
+    -o /app/plugins/io_kestra_plugin__plugin-scripts-runner-docker__latest.jar
+
+# Switch back to default Kestra user
+USER kestra

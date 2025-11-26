@@ -1,0 +1,36 @@
+id: test_flow
+namespace: shopzada.team
+
+tasks:
+  - id: BusinessDeptLoader
+    type: io.kestra.plugin.scripts.python.Script
+
+    beforeCommands:
+      - pip install pandas
+      - pip install pyarrow
+
+    namespaceFiles:
+      enabled: True
+      include:
+        - dataframe.py
+
+    script: |
+      from dataframe import set_frame, append_files
+      import pandas as pd
+      import glob
+
+      # Load all parquet files from dataset folder
+      product_list = glob.glob("/dataset/BusinessDepartment/product_list*.parquet")
+      product_list.sort()
+
+      df = set_frame(product_list[0])
+
+      if len(product_list) > 1:
+        product_list.pop(0)
+        df = append_files(df, product_list)
+
+      # Output combined parquet for next steps
+      df.to_parquet('/tmp/product_list_combined.parquet')
+
+    outputFiles:
+      - "/tmp/product_list_combined.parquet"

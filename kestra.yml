@@ -1,0 +1,9 @@
+kestra:
+  queue:
+    type: memory
+  repository:
+    type: memory
+  storage:
+    type: local
+    local:
+      folder: /app/dataset
