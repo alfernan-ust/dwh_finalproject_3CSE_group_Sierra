@@ -101,8 +101,7 @@ tasks:
         taskRunner:
           type: io.kestra.plugin.core.runner.Process
         outputFiles:
-          - line_item_data_prices.parquet
-          - line_item_data_products.parquet
+          - order_product_list.parquet
           - output_order_data.parquet
           - order_delays.parquet
         commands:
