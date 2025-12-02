@@ -4,6 +4,15 @@ import pickle
 import json
 import glob
 import os
+import datetime
+
+def isWeekend(d):
+    # d is a Date object
+    day = int(d.strftime('%w'))
+    if day==0 or day==6:
+        return 1
+    else:
+        return 0
 
 # <-- LEGACY DATA
             # # Line item data prices
@@ -27,6 +36,7 @@ import os
             # df.to_parquet("line_item_data_products.parquet")
 # -->            
 
+# order_product_list
 line_item_data_prices = glob.glob("/dataset/Operations Department/line_item_data_prices*")
 line_item_data_prices.sort()
 df = set_frame(line_item_data_prices[0])
@@ -57,6 +67,18 @@ agg_df.sort_values(by='order_id', inplace=True, ignore_index=True)
 
 agg_df.to_parquet('order_product_list.parquet') # Aggregated line_item_data_prices and line_item_data_prodcuts
 
+# order_cost
+total_price_list = []
+for index, row in agg_df.iterrows():
+    total_price_list.append(row['quantity'] * row['price'])
+agg_df.insert(loc=5, column='total_price', value=total_price_list)
+
+order_cost_df = agg_df.groupby(['order_id']).agg({
+    'total_price': 'sum'
+}).reset_index()
+
+order_cost_df.to_parquet('order_cost.parquet')
+
 # Order Data
 order_data = glob.glob("/dataset/Operations Department/order_data*")
 order_data.sort()
@@ -68,6 +90,36 @@ ctr = 1
 # Removes non/numerical data in 'estimated arrival' column
 df.replace(to_replace={'estimated arrival': '[^0-9]'}, value="", inplace=True, regex=True)
 
+df.to_parquet('output_order_data.parquet')
+
+year_list = []
+quarter_list = []
+month_list = []
+month_name_list = []
+day_list = []
+weekday_list = []
+weekday_name_list = []
+is_weekend_list = []
+for index, row in df.iterrows():
+    date_row = row['transaction_date']
+    d = datetime.date(int(date_row[:4]), int(date_row[5:7]), int(date_row[8:]))
+    year_list.append(d.year)
+    quarter_list.append( d.month//4 + 1 )
+    month_list.append(d.month)
+    month_name_list.append( d.strftime('%B') )
+    day_list.append(d.day)
+    weekday_list.append( d.strftime('%w') ) # 0 = sunday, 6 = saturday
+    weekday_name_list.append( d.strftime('%A') )
+    is_weekend_list.append( isWeekend(d) )
+new_columns = {'year':year_list,
+              'quarter':quarter_list,
+              'month':month_list,
+              'month_name_list':month_name_list,
+                'day':day_list,
+              'weekday':weekday_list,
+              'weekday_name_list':weekday_name_list,
+              'is_weekend':is_weekend_list}
+df = df.assign(**new_columns)
 df.to_parquet('output_order_data.parquet')
 
 # Order Delays
