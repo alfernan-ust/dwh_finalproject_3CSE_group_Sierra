@@ -1,72 +1,97 @@
+#!/usr/bin/env python3
+import os
+import sys
 import pandas as pd
 import psycopg2
-import os
+import psycopg2.extras
 
-# --- Step 1: File path ---
-file_path = "/dataset/transactional_campaign_data.parquet"
-if not os.path.exists(file_path):
-    raise FileNotFoundError(f"{file_path} not found")
+FILE = "/dataset/transactional_campaign_data.parquet"
 
-# --- Step 2: Load Parquet ---
-df = pd.read_parquet(file_path)
-df = df.where(pd.notnull(df), None)
+PG_HOST = "postgres"
+PG_DB = "kestra"
+PG_USER = "kestra"
+PG_PASS = "k3str4"
+BATCH_SIZE = 200
 
-# --- Step 3: Convert timestamp columns if needed ---
-for col in ['transaction_date', 'estimated_arrival']:
-    if col in df.columns:
-        df[col] = pd.to_datetime(df[col], errors='coerce')
+def require_file(path):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} not found")
 
-# Ensure 'availed' is boolean
-if 'availed' in df.columns:
-    df['availed'] = df['availed'].astype(bool)
-else:
-    df['availed'] = True  # default True if missing
+def safe_bool(v):
+    if v is None:
+        return True
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return bool(v)
 
-# --- Step 4: Connect to PostgreSQL ---
-conn = psycopg2.connect(
-    host="postgres",
-    database="kestra",
-    user="kestra",
-    password="k3str4"
-)
-cur = conn.cursor()
+    s = str(v).strip().lower()
+    if s in ("true", "t", "1", "yes", "y"):
+        return True
+    if s in ("false", "f", "0", "no", "n"):
+        return False
 
-# --- Step 5: Create fact_campaign_transactions table ---
-cur.execute("""
-CREATE TABLE IF NOT EXISTS fact_campaign_transactions (
-    transaction_id serial PRIMARY KEY,
-    order_id varchar REFERENCES fact_orders(order_id),
-    campaign_id varchar REFERENCES dim_campaign(campaign_id),
-    transaction_date timestamp,
-    estimated_arrival timestamp,
-    availed boolean
-);
-""")
-conn.commit()
+    return True
 
-# --- Step 6: Insert data ---
-for _, row in df.iterrows():
+def main():
+
+    require_file(FILE)
+
+    df = pd.read_parquet(FILE)
+    df = df.where(pd.notnull(df), None)
+
+    if "availed" in df.columns:
+        df["availed"] = df["availed"].apply(safe_bool)
+    else:
+        df["availed"] = True
+
+    print("=== SAMPLE (first 10 rows) ===")
+    print(df[["order_id", "campaign_id", "availed"]].head(10).to_string(index=False))
+
+    conn = psycopg2.connect(
+        host=PG_HOST,
+        database=PG_DB,
+        user=PG_USER,
+        password=PG_PASS
+    )
+    cur = conn.cursor()
+
     cur.execute("""
+    CREATE TABLE IF NOT EXISTS fact_campaign_transactions (
+        transaction_id serial PRIMARY KEY,
+        order_id varchar REFERENCES fact_orders(order_id),
+        campaign_id varchar REFERENCES dim_campaign(campaign_id),
+        availed boolean
+    );
+    """)
+    conn.commit()
+
+    rows = []
+    for _, r in df.iterrows():
+        rows.append((
+            r.get("order_id"),
+            r.get("campaign_id"),
+            r.get("availed")
+        ))
+
+    insert_sql = """
         INSERT INTO fact_campaign_transactions (
-            order_id, campaign_id, transaction_date, estimated_arrival, availed
-        )
-        VALUES (%s, %s, %s, %s, %s)
-        ON CONFLICT (transaction_id) DO UPDATE
-        SET order_id = EXCLUDED.order_id,
-            campaign_id = EXCLUDED.campaign_id,
-            transaction_date = EXCLUDED.transaction_date,
-            estimated_arrival = EXCLUDED.estimated_arrival,
-            availed = EXCLUDED.availed;
-    """, (
-        row.get('order_id'),
-        row.get('campaign_id'),
-        row.get('transaction_date'),
-        row.get('estimated_arrival'),
-        row.get('availed')
-    ))
+            order_id, campaign_id, availed
+        ) VALUES (%s, %s, %s)
+    """
 
-conn.commit()
-cur.close()
-conn.close()
+    try:
+        psycopg2.extras.execute_batch(cur, insert_sql, rows, page_size=BATCH_SIZE)
+        conn.commit()
+        print(f"Loaded {len(rows)} rows into fact_campaign_transactions")
+    except Exception as e:
+        conn.rollback()
+        print("Insert failed:", e, file=sys.stderr)
+        raise
+    finally:
+        cur.close()
+        conn.close()
 
-print(f"Loaded {len(df)} rows into fact_campaign_transactions")
+
+if __name__ == "__main__":
+    main()

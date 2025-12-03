@@ -2,17 +2,14 @@ import pandas as pd
 import psycopg2
 import os
 
-# --- File path ---
 file_path = "/dataset/product_list.parquet"
 if not os.path.exists(file_path):
     raise FileNotFoundError(f"{file_path} not found")
 
 df = pd.read_parquet(file_path)
 
-# --- Clean ---
 df = df.where(pd.notnull(df), None)
 
-# --- Connect to PostgreSQL ---
 conn = psycopg2.connect(
     host="postgres",
     database="kestra",
@@ -21,7 +18,6 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-# --- Create table if not exists ---
 cur.execute("""
 CREATE TABLE IF NOT EXISTS dim_product (
     product_id varchar PRIMARY KEY,
@@ -32,7 +28,6 @@ CREATE TABLE IF NOT EXISTS dim_product (
 """)
 conn.commit()
 
-# --- Insert data ---
 for _, row in df.iterrows():
     cur.execute("""
     INSERT INTO dim_product (product_id, product_name, product_type, price)

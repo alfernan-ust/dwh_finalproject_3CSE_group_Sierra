@@ -9,9 +9,7 @@ if not os.path.exists(file_path):
 df = pd.read_parquet(file_path)
 df = df.where(pd.notnull(df), None)
 
-# --- Fix discount column safely ---
 if 'discount' in df.columns:
-    # Remove any % or text, convert to float, coerce errors to NaN
     df['discount'] = pd.to_numeric(
         df['discount'].astype(str).str.replace(r'[^0-9.]', '', regex=True),
         errors='coerce'
@@ -30,7 +28,6 @@ CREATE TABLE IF NOT EXISTS dim_campaign (
 """)
 conn.commit()
 
-# --- Insert safely, skip bad rows ---
 for _, row in df.iterrows():
     try:
         cur.execute("""

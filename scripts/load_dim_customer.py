@@ -2,7 +2,6 @@ import pandas as pd
 import psycopg2
 import os
 
-# --- File paths ---
 user_file = "/dataset/user_data.parquet"
 credit_file = "/dataset/credit_card.parquet"
 job_file = "/dataset/user_job.parquet"
@@ -18,7 +17,6 @@ df_jobs = pd.read_parquet(job_file)
 df = df_users.merge(df_credit, on="user_id", how="left")
 df = df.merge(df_jobs, on="user_id", how="left")
 
-# Convert dates
 for col in ['creation_date', 'birthdate']:
     if col in df.columns:
         df[col] = pd.to_datetime(df[col], errors='coerce')
