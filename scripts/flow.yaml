@@ -8,9 +8,7 @@ tasks:
       - id: BusinessDept
         type: io.kestra.plugin.scripts.python.Commands
         beforeCommands:
-          - pip install pandas
-          - pip install openpyxl
-          - pip install pyarrow
+          - pip install pandas openpyxl pyarrow
         namespaceFiles:
           enabled: True
           include:
@@ -45,11 +43,7 @@ tasks:
       - id: EnterpriseDepartment
         type: io.kestra.plugin.scripts.python.Commands
         beforeCommands:
-          - pip install pandas 
-          - pip install pyarrow
-          - pip install bs4
-          - pip install lxml
-          - pip install html5lib
+          - pip install pandas pyarrow bs4 lxml html5lib
         namespaceFiles:
           enabled: True
           include:
@@ -67,11 +61,7 @@ tasks:
       - id: MarketingDepartment
         type: io.kestra.plugin.scripts.python.Commands
         beforeCommands:
-          - pip install pandas 
-          - pip install pyarrow
-          - pip install bs4
-          - pip install lxml
-          - pip install html5lib
+          - pip install pandas pyarrow bs4 lxml html5lib
         namespaceFiles:
           enabled: True
           include:
@@ -88,11 +78,7 @@ tasks:
       - id: OperationsDepartment
         type: io.kestra.plugin.scripts.python.Commands
         beforeCommands:
-          - pip install pandas
-          - pip install bs4
-          - pip install lxml
-          - pip install html5lib
-          - pip install openpyxl
+          - pip install pandas bs4 lxml html5lib openpyxl
         namespaceFiles:
           enabled: True
           include:
@@ -101,10 +87,10 @@ tasks:
         taskRunner:
           type: io.kestra.plugin.core.runner.Process
         outputFiles:
-          - line_item_data_prices.parquet
-          - line_item_data_products.parquet
+          - order_product_list.parquet
           - output_order_data.parquet
           - order_delays.parquet
+          - order-cost.parquet
         commands:
           - python operations.py
                       
