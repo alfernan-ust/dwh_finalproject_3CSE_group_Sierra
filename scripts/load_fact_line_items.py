@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 load_fact_line_items.py
 
@@ -22,9 +21,8 @@ import pandas as pd
 import psycopg2
 import psycopg2.extras
 
-# ---------- CONFIG ----------
-LINE_PRODUCTS = "/dataset/line_item_data_products.parquet"  # order_id, product_id, product_name
-LINE_PRICES   = "/dataset/line_item_data_prices.parquet"    # order_id, price, quantity
+LINE_PRODUCTS = "/dataset/line_item_data_products.parquet"  
+LINE_PRICES   = "/dataset/line_item_data_prices.parquet"    
 
 PG = dict(
     host="postgres",
@@ -42,7 +40,6 @@ logging.basicConfig(
 )
 
 
-# ---------- HELPERS ----------
 def require_file(path: str):
     if not os.path.exists(path):
         raise FileNotFoundError(path)
@@ -78,7 +75,6 @@ def align_products_quantities(df_p: pd.DataFrame, df_q: pd.DataFrame) -> pd.Data
     df_p = df_p.copy()
     df_q = df_q.copy()
 
-    # normalize order_id
     if "order_id" not in df_p.columns or "order_id" not in df_q.columns:
         raise Exception("Both line item files must contain order_id")
 
@@ -130,8 +126,6 @@ def align_products_quantities(df_p: pd.DataFrame, df_q: pd.DataFrame) -> pd.Data
     df = df.where(pd.notnull(df), None)
     return df
 
-
-# ---------- DB HELPERS ----------
 def ensure_fact_line_items_table(conn):
     """
     fact_line_items:
@@ -146,6 +140,7 @@ def ensure_fact_line_items_table(conn):
             order_id   varchar REFERENCES fact_orders(order_id),
             product_id varchar REFERENCES dim_product(product_id),
             quantity   int
+            
         );
         """
     )
@@ -190,18 +185,18 @@ def insert_fact_line_items(conn, df: pd.DataFrame) -> int:
     return len(rows)
 
 
-# ---------- MAIN ----------
+
 def main():
     logging.info("Starting load_fact_line_items...")
 
-    # 1. Check files
+    
     require_file(LINE_PRODUCTS)
     require_file(LINE_PRICES)
 
-    # 2. Load parquet files
+    
     logging.info("Reading line item parquet files")
-    df_p = pd.read_parquet(LINE_PRODUCTS)  # order_id, product_id, product_name
-    df_q = pd.read_parquet(LINE_PRICES)    # order_id, price, quantity
+    df_p = pd.read_parquet(LINE_PRODUCTS)  
+    df_q = pd.read_parquet(LINE_PRICES)    
 
     logging.info("Products rows: %d; Prices rows: %d", len(df_p), len(df_q))
 

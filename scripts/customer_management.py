@@ -34,7 +34,7 @@ for index, row in df.iterrows():
     birthdate_raw = row['birthdate']
     birthdate = datetime.date(int(birthdate_raw[:4]), int(birthdate_raw[5:7]), int(birthdate_raw[8:10]))
     age_list.append(calculate_age(birthdate))
-
+df['age'] = age_list 
 df.to_parquet('/dataset/user_data.parquet')
 
 # User job

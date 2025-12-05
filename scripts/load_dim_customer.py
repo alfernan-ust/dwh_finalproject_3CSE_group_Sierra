@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS dim_customer (
     job_title varchar,
     job_level varchar,
     credit_card_number varchar,
-    issuing_bank varchar
+    issuing_bank varchar,
+    age int
 );
 """)
 conn.commit()
@@ -57,8 +58,8 @@ for _, row in df.iterrows():
         INSERT INTO dim_customer (
             user_id, name, creation_date, street, state, city, country,
             birthdate, gender, device_address, user_type, job_title, job_level,
-            credit_card_number, issuing_bank
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            credit_card_number, issuing_bank, age
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (user_id) DO UPDATE
         SET name = EXCLUDED.name,
             creation_date = EXCLUDED.creation_date,
@@ -73,13 +74,14 @@ for _, row in df.iterrows():
             job_title = EXCLUDED.job_title,
             job_level = EXCLUDED.job_level,
             credit_card_number = EXCLUDED.credit_card_number,
-            issuing_bank = EXCLUDED.issuing_bank;
+            issuing_bank = EXCLUDED.issuing_bank,
+            age = EXCLUDED.age;
     """, (
         row.get('user_id'), row.get('name'), row.get('creation_date'), row.get('street'),
         row.get('state'), row.get('city'), row.get('country'), row.get('birthdate'),
         row.get('gender'), row.get('device_address'), row.get('user_type'),
         row.get('job_title'), row.get('job_level'), row.get('credit_card_number'),
-        row.get('issuing_bank')
+        row.get('issuing_bank'), row.get('age')
     ))
 
 conn.commit()

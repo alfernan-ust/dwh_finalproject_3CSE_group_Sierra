@@ -22,15 +22,16 @@ CREATE TABLE IF NOT EXISTS dim_staff (
     city varchar,
     country varchar,
     contact_number varchar,
-    creation_date timestamp
+    creation_date timestamp,
+    age int
 );
 """)
 conn.commit()
 
 for _, row in df.iterrows():
     cur.execute("""
-        INSERT INTO dim_staff (staff_id, name, job_level, street, state, city, country, contact_number, creation_date)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO dim_staff (staff_id, name, job_level, street, state, city, country, contact_number, creation_date, age)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (staff_id) DO UPDATE
         SET name = EXCLUDED.name,
             job_level = EXCLUDED.job_level,
@@ -39,9 +40,10 @@ for _, row in df.iterrows():
             city = EXCLUDED.city,
             country = EXCLUDED.country,
             contact_number = EXCLUDED.contact_number,
-            creation_date = EXCLUDED.creation_date;
+            creation_date = EXCLUDED.creation_date,
+            age = EXCLUDED.age;
     """, (row['staff_id'], row['name'], row['job_level'], row['street'], row['state'],
-          row['city'], row['country'], row['contact_number'], row['creation_date']))
+          row['city'], row['country'], row['contact_number'], row['creation_date'], row['age']))
 
 conn.commit()
 cur.close()

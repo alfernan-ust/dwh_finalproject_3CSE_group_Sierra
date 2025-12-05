@@ -16,7 +16,7 @@ def isWeekend(d):
 
 # <-- LEGACY DATA
             # # Line item data prices
-            # line_item_data_prices = glob.glob("/dataset/Operations Department/line_item_data_prices*")
+            # line_item_data_prices = glob.glob("/dataset/OperationsDepartment/line_item_data_prices*")
             # line_item_data_prices.sort()
             # df = set_frame(line_item_data_prices[0])
             # line_item_data_prices.pop(0)
@@ -27,7 +27,7 @@ def isWeekend(d):
             # df.to_parquet("line_item_data_prices.parquet")
 
             # # Line item data products
-            # line_item_data_products = glob.glob("/dataset/Operations Department/line_item_data_products*")
+            # line_item_data_products = glob.glob("/dataset/OperationsDepartment/line_item_data_products*")
             # line_item_data_products.sort()
             # df = set_frame(line_item_data_products[0])
             # line_item_data_products.pop(0)
@@ -37,7 +37,7 @@ def isWeekend(d):
 # -->            
 
 # order_product_list
-line_item_data_prices = glob.glob("/dataset/Operations Department/line_item_data_prices*")
+line_item_data_prices = glob.glob("/dataset/OperationsDepartment/line_item_data_prices*")
 line_item_data_prices.sort()
 df = set_frame(line_item_data_prices[0])
 line_item_data_prices.pop(0)
@@ -48,7 +48,7 @@ df.replace(to_replace={'quantity': '[^0-9]'}, value="", inplace=True, regex=True
 df.sort_values(by='order_id', inplace=True, ignore_index=True)
 df['quantity'] = pd.to_numeric(df['quantity'], downcast='integer', errors='coerce')
 
-line_item_data_products = glob.glob("/dataset/Operations Department/line_item_data_products*")
+line_item_data_products = glob.glob("/dataset/OperationsDepartment/line_item_data_products*")
 line_item_data_products.sort()
 df2 = set_frame(line_item_data_products[0])
 line_item_data_products.pop(0)
@@ -65,7 +65,7 @@ agg_df = new_df.groupby(['order_id_caller', 'product_id', 'product_name', 'price
 agg_df.rename(columns={"order_id_caller":"order_id"}, inplace=True)
 agg_df.sort_values(by='order_id', inplace=True, ignore_index=True)
 
-agg_df.to_parquet('order_product_list.parquet') # Aggregated line_item_data_prices and line_item_data_prodcuts
+agg_df.to_parquet('/dataset/order_product_list.parquet') # Aggregated line_item_data_prices and line_item_data_prodcuts
 
 # order_cost
 total_price_list = []
@@ -77,10 +77,10 @@ order_cost_df = agg_df.groupby(['order_id']).agg({
     'total_price': 'sum'
 }).reset_index()
 
-order_cost_df.to_parquet('order_cost.parquet')
+order_cost_df.to_parquet('/dataset/order_cost.parquet')
 
 # Order Data
-order_data = glob.glob("/dataset/Operations Department/order_data*")
+order_data = glob.glob("/dataset/OperationsDepartment/order_data*")
 order_data.sort()
 df = set_frame(order_data[0])
 order_data.pop(0)
@@ -90,7 +90,7 @@ ctr = 1
 # Removes non/numerical data in 'estimated arrival' column
 df.replace(to_replace={'estimated arrival': '[^0-9]'}, value="", inplace=True, regex=True)
 
-df.to_parquet('output_order_data.parquet')
+df.to_parquet('/dataset/output_order_data.parquet')
 
 year_list = []
 quarter_list = []
@@ -120,10 +120,10 @@ new_columns = {'year':year_list,
               'weekday_name_list':weekday_name_list,
               'is_weekend':is_weekend_list}
 df = df.assign(**new_columns)
-df.to_parquet('output_order_data.parquet')
+df.to_parquet('/dataset/output_order_data.parquet')
 
 # Order Delays
-order_delays = glob.glob("/dataset/Operations Department/order_delay*")
+order_delays = glob.glob("/dataset/OperationsDepartment/order_delay*")
 order_delays.sort()
 df = set_frame(order_delays[0])
 
@@ -131,4 +131,4 @@ if len(order_delays) > 1:
     order_delays.pop(0)
     df = append_files(df, order_delays)
 
-df.to_parquet("order_delays.parquet")
+df.to_parquet("/dataset/order_delays.parquet")

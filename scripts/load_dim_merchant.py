@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS dim_merchant (
     merchant_id varchar PRIMARY KEY,
     name varchar,
     creation_date timestamp,
+    age int,
     street varchar,
     state varchar,
     city varchar,
@@ -28,17 +29,18 @@ conn.commit()
 
 for _, row in df.iterrows():
     cur.execute("""
-        INSERT INTO dim_merchant (merchant_id, name, creation_date, street, state, city, country, contact_number)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO dim_merchant (merchant_id, name, creation_date, age, street, state, city, country, contact_number)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (merchant_id) DO UPDATE
         SET name = EXCLUDED.name,
             creation_date = EXCLUDED.creation_date,
+            age = EXCLUDED.age,
             street = EXCLUDED.street,
             state = EXCLUDED.state,
             city = EXCLUDED.city,
             country = EXCLUDED.country,
             contact_number = EXCLUDED.contact_number;
-    """, (row['merchant_id'], row['name'], row['creation_date'], row['street'],
+    """, (row['merchant_id'], row['name'], row['creation_date'], row['age'], row['street'],
           row['state'], row['city'], row['country'], row['contact_number']))
 
 conn.commit()
