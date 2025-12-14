@@ -1,0 +1,27 @@
+# Database Files
+pgdata/
+postgres-data/
+*.sql.gz
+*.db
+*.sqlite
+
+# Python & System
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Pythongit push origin main
+env/
+venv/
+.env
+.DS_Store
+
+# Kestra & IDE
+.kestra/
+.idea/
+.vscode/
+
+#Logs & Outputs
+logs/
+output/
+*.log
