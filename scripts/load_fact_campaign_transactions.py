@@ -37,15 +37,20 @@ def main():
     require_file(FILE)
 
     df = pd.read_parquet(FILE)
+    
+    if 'transaction_date' in df.columns:
+        df = df.drop(columns=['transaction_date'])
+
     df = df.where(pd.notnull(df), None)
 
     if "availed" in df.columns:
         df["availed"] = df["availed"].apply(safe_bool)
     else:
         df["availed"] = True
-
+        
     print("=== SAMPLE (first 10 rows) ===")
     print(df[["order_id", "campaign_id", "availed"]].head(10).to_string(index=False))
+
 
     conn = psycopg2.connect(
         host=PG_HOST,
