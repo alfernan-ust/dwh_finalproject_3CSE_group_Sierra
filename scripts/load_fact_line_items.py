@@ -134,16 +134,20 @@ def ensure_fact_line_items_table(conn):
         quantity
     """
     cur = conn.cursor()
+    
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS fact_line_items (
             order_id   varchar REFERENCES fact_orders(order_id),
             product_id varchar REFERENCES dim_product(product_id),
             quantity   int
-            
         );
         """
     )
+    
+    logging.info("Truncating fact_line_items to prevent duplicates...")
+    cur.execute("TRUNCATE TABLE fact_line_items CASCADE;")
+    
     conn.commit()
     cur.close()
 

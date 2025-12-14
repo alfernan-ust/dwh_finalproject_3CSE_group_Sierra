@@ -18,7 +18,6 @@ PG_USER = "kestra"
 PG_PASS = "k3str4"
 BATCH_SIZE = 200
 
-# ---------- HELPERS (unchanged) ----------
 
 def require_files(*paths):
     for p in paths:
@@ -76,11 +75,9 @@ def apply_trans_offset(row):
             return row.get('transaction_date')
     return row.get('transaction_date')
 
-# ---------- NEW: WAITER FUNCTION ----------
 def wait_for_date_keys(conn, required_keys, max_retries=10, delay_sec=5):
     """Polls the dim_date table until all required keys are available."""
     
-    # Filter out None keys if any exist
     required_keys = set(k for k in required_keys if k is not None)
     if not required_keys:
         print("No date keys required. Skipping wait.")
@@ -91,7 +88,6 @@ def wait_for_date_keys(conn, required_keys, max_retries=10, delay_sec=5):
     for attempt in range(max_retries):
         cur = conn.cursor()
         
-        # Query for the keys that are currently missing
         missing_keys_query = f"""
             SELECT unnest(array{list(required_keys)}) 
             EXCEPT 
@@ -111,7 +107,6 @@ def wait_for_date_keys(conn, required_keys, max_retries=10, delay_sec=5):
         else:
             raise Exception(f"Failed to find all required date keys after {max_retries} attempts. Missing keys: {missing_keys}")
 
-# ---------- MAIN (updated) ----------
 
 def main():
 
@@ -132,7 +127,6 @@ def main():
     if sid: orders_map[sid] = 'staff_id'
     df_orders = df_orders.rename(columns=orders_map)
 
-    output_map = {}
     output_map = {}
     oid = pick_col(df_output, ['order_id','id','order_uuid'])
     if oid: output_map[oid] = 'order_id'
@@ -211,7 +205,6 @@ def main():
     if 'transaction_date' in df.columns and 'transaction_date_raw' in df.columns:
         df['transaction_date'] = df.apply(apply_trans_offset, axis=1)
 
-    # --- NEW DATE KEY CREATION ---
     if 'transaction_date' in df.columns:
         df['transaction_date_key'] = df['transaction_date'].dt.strftime('%Y-%m-%d').where(df['transaction_date'].notnull(), None)
     else:
@@ -222,17 +215,14 @@ def main():
     else:
         df['estimated_arrival_date_key'] = None
         
-    # Collect required keys before dropping the column
     required_date_keys = list(df['transaction_date_key'].dropna().unique()) + list(df['estimated_arrival_date_key'].dropna().unique())
-    required_date_keys = [str(k) for k in set(required_date_keys)] # Ensure unique strings
-    # -----------------------------
+    required_date_keys = [str(k) for k in set(required_date_keys)] 
         
     if 'estimated_arrival_raw' in df.columns:
         df.drop(columns=['estimated_arrival_raw'], inplace=True)
     if 'transaction_date_raw' in df.columns:
         df.drop(columns=['transaction_date_raw'], inplace=True)
 
-    # Drop original timestamp columns before loading to Fact table
     df.drop(columns=['transaction_date', 'estimated_arrival'], inplace=True, errors='ignore')
 
     if 'total_price' in df.columns:
@@ -240,17 +230,16 @@ def main():
 
     df = df.where(pd.notnull(df), None)
 
-    # sample log (Updated column list)
     sample_cols = ['order_id','user_id','merchant_id','staff_id','transaction_date_key','estimated_arrival_date_key','delay_in_days', 'total_price']
     present_cols = [c for c in sample_cols if c in df.columns]
     print("SAMPLE (first 10):")
     print(df[present_cols].head(10).to_string(index=False))
 
-    # Connect to Postgres
     conn = psycopg2.connect(host=PG_HOST, database=PG_DB, user=PG_USER, password=PG_PASS)
     cur = conn.cursor()
     
-    # 5.1 Update DDL (Use date keys instead of timestamps)
+    cur.execute("TRUNCATE TABLE fact_orders CASCADE;")
+    
     cur.execute("""
     CREATE TABLE IF NOT EXISTS fact_orders (
         order_id varchar PRIMARY KEY,
@@ -267,14 +256,9 @@ def main():
     );
     """)
     conn.commit()
-    
-    # -------------------------------------------------------------
-    # CRITICAL FIX: WAIT FOR DIMENSION DATA BEFORE INSERTING FACTS
-    # -------------------------------------------------------------
-    wait_for_date_keys(conn, required_date_keys)
-    # -------------------------------------------------------------
 
-    # 5.2 Prepare rows for batch insert
+    wait_for_date_keys(conn, required_date_keys)
+
     rows = []
     for _, r in df.iterrows():
         rows.append((
@@ -288,7 +272,6 @@ def main():
             r.get('total_price')
         ))
 
-    # 5.3 Update INSERT/UPDATE SQL
     insert_sql = """
     INSERT INTO fact_orders (
         order_id, user_id, merchant_id, staff_id, 

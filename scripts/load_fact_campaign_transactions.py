@@ -60,6 +60,9 @@ def main():
     )
     cur = conn.cursor()
 
+    cur.execute("TRUNCATE TABLE fact_campaign_transactions CASCADE;")
+    conn.commit()
+
     cur.execute("""
     CREATE TABLE IF NOT EXISTS fact_campaign_transactions (
         transaction_id serial PRIMARY KEY,
