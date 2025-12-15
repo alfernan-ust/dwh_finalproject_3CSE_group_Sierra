@@ -18,21 +18,23 @@ def require_file(path):
 
 def main():
     require_file(FILE)
-
     df = pd.read_parquet(FILE)
+    
+    # Duplicate Logic
+    df['is_duplicate'] = df.duplicated(subset=['product_id'], keep='last')
     df = df.where(pd.notnull(df), None)
 
-    conn = psycopg2.connect(
-        host=PG_HOST,
-        database=PG_DB,
-        user=PG_USER,
-        password=PG_PASS
-    )
+    conn = psycopg2.connect(host=PG_HOST, database=PG_DB, user=PG_USER, password=PG_PASS)
     cur = conn.cursor()
 
+    cur.execute("DROP TABLE IF EXISTS dim_product CASCADE;")
+    conn.commit()
+
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS dim_product (
-        product_id varchar PRIMARY KEY,
+    CREATE TABLE dim_product (
+        product_key SERIAL PRIMARY KEY, -- Surrogate Key
+        product_id varchar,             -- Business Key
+        is_duplicate boolean,
         product_name varchar,
         product_type varchar,
         price decimal(10,2)
@@ -40,25 +42,19 @@ def main():
     """)
     conn.commit()
 
-    cur.execute("TRUNCATE TABLE dim_product CASCADE;")
-    conn.commit()
-
     rows = []
     for _, row in df.iterrows():
         rows.append((
             row.get('product_id'),
+            row.get('is_duplicate'),
             row.get('product_name'),
             row.get('product_type'),
             row.get('price')
         ))
 
     insert_sql = """
-        INSERT INTO dim_product (product_id, product_name, product_type, price)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (product_id) DO UPDATE
-        SET product_name = EXCLUDED.product_name,
-            product_type = EXCLUDED.product_type,
-            price = EXCLUDED.price;
+        INSERT INTO dim_product (product_id, is_duplicate, product_name, product_type, price)
+        VALUES (%s, %s, %s, %s, %s)
     """
 
     try:

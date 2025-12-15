@@ -29,23 +29,27 @@ def main():
     df = df_users.merge(df_credit, on="user_id", how="left")
     df = df.merge(df_jobs, on="user_id", how="left")
 
+    # Duplicate Logic
+    df['is_duplicate'] = df.duplicated(subset=['user_id'], keep='last')
+
+    # Date Cleaning
     for col in ['creation_date', 'birthdate']:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
 
     df = df.where(pd.notnull(df), None)
 
-    conn = psycopg2.connect(
-        host=PG_HOST,
-        database=PG_DB,
-        user=PG_USER,
-        password=PG_PASS
-    )
+    conn = psycopg2.connect(host=PG_HOST, database=PG_DB, user=PG_USER, password=PG_PASS)
     cur = conn.cursor()
 
+    cur.execute("DROP TABLE IF EXISTS dim_customer CASCADE;")
+    conn.commit()
+
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS dim_customer (
-        user_id varchar PRIMARY KEY,
+    CREATE TABLE dim_customer (
+        customer_key SERIAL PRIMARY KEY, 
+        user_id varchar,                 
+        is_duplicate boolean,
         name varchar,
         creation_date timestamp,
         street varchar,
@@ -65,13 +69,11 @@ def main():
     """)
     conn.commit()
 
-    cur.execute("TRUNCATE TABLE dim_customer CASCADE;")
-    conn.commit()
-
     rows = []
     for _, row in df.iterrows():
         rows.append((
             row.get('user_id'),
+            row.get('is_duplicate'),
             row.get('name'),
             row.get('creation_date'),
             row.get('street'),
@@ -91,26 +93,10 @@ def main():
 
     insert_sql = """
         INSERT INTO dim_customer (
-            user_id, name, creation_date, street, state, city, country,
+            user_id, is_duplicate, name, creation_date, street, state, city, country,
             birthdate, gender, device_address, user_type, job_title, job_level,
             credit_card_number, issuing_bank, age
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (user_id) DO UPDATE
-        SET name = EXCLUDED.name,
-            creation_date = EXCLUDED.creation_date,
-            street = EXCLUDED.street,
-            state = EXCLUDED.state,
-            city = EXCLUDED.city,
-            country = EXCLUDED.country,
-            birthdate = EXCLUDED.birthdate,
-            gender = EXCLUDED.gender,
-            device_address = EXCLUDED.device_address,
-            user_type = EXCLUDED.user_type,
-            job_title = EXCLUDED.job_title,
-            job_level = EXCLUDED.job_level,
-            credit_card_number = EXCLUDED.credit_card_number,
-            issuing_bank = EXCLUDED.issuing_bank,
-            age = EXCLUDED.age;
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     try:

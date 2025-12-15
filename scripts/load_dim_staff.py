@@ -18,21 +18,23 @@ def require_file(path):
 
 def main():
     require_file(FILE)
-
     df = pd.read_parquet(FILE)
+    
+    # Duplicate Logic
+    df['is_duplicate'] = df.duplicated(subset=['staff_id'], keep='last')
     df = df.where(pd.notnull(df), None)
 
-    conn = psycopg2.connect(
-        host=PG_HOST,
-        database=PG_DB,
-        user=PG_USER,
-        password=PG_PASS
-    )
+    conn = psycopg2.connect(host=PG_HOST, database=PG_DB, user=PG_USER, password=PG_PASS)
     cur = conn.cursor()
 
+    cur.execute("DROP TABLE IF EXISTS dim_staff CASCADE;")
+    conn.commit()
+
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS dim_staff (
-        staff_id varchar PRIMARY KEY,
+    CREATE TABLE dim_staff (
+        staff_key SERIAL PRIMARY KEY, 
+        staff_id varchar,             
+        is_duplicate boolean,
         name varchar,
         job_level varchar,
         street varchar,
@@ -46,13 +48,11 @@ def main():
     """)
     conn.commit()
 
-    cur.execute("TRUNCATE TABLE dim_staff CASCADE;")
-    conn.commit()
-
     rows = []
     for _, row in df.iterrows():
         rows.append((
             row.get('staff_id'),
+            row.get('is_duplicate'),
             row.get('name'),
             row.get('job_level'),
             row.get('street'),
@@ -66,19 +66,8 @@ def main():
 
     insert_sql = """
         INSERT INTO dim_staff (
-            staff_id, name, job_level, street, state, city, country, contact_number, creation_date, age
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (staff_id) DO UPDATE
-        SET name = EXCLUDED.name,
-            job_level = EXCLUDED.job_level,
-            street = EXCLUDED.street,
-            state = EXCLUDED.state,
-            city = EXCLUDED.city,
-            country = EXCLUDED.country,
-            contact_number = EXCLUDED.contact_number,
-            creation_date = EXCLUDED.creation_date,
-            age = EXCLUDED.age;
+            staff_id, is_duplicate, name, job_level, street, state, city, country, contact_number, creation_date, age
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     try:

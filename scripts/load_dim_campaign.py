@@ -22,6 +22,9 @@ def main():
     df = pd.read_parquet(FILE)
     df = df.where(pd.notnull(df), None)
 
+    # Duplicate Logic    
+    df['is_duplicate'] = df.duplicated(subset=['campaign_id'], keep='last')
+
     if 'discount' in df.columns:
         df['discount'] = pd.to_numeric(
             df['discount'].astype(str).str.replace(r'[^0-9.]', '', regex=True),
@@ -36,9 +39,14 @@ def main():
     )
     cur = conn.cursor()
 
+    cur.execute("DROP TABLE IF EXISTS dim_campaign CASCADE;")
+    conn.commit()
+
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS dim_campaign (
-        campaign_id varchar PRIMARY KEY,
+    CREATE TABLE dim_campaign (
+        campaign_key SERIAL PRIMARY KEY,
+        campaign_id varchar,
+        is_duplicate boolean,
         campaign_name varchar,
         campaign_description varchar,
         discount decimal(5,2)
@@ -46,25 +54,21 @@ def main():
     """)
     conn.commit()
 
-    cur.execute("TRUNCATE TABLE dim_campaign CASCADE;")
-    conn.commit()
-
     rows = []
     for _, row in df.iterrows():
         rows.append((
             row.get('campaign_id'),
+            row.get('is_duplicate'),
             row.get('campaign_name'),
             row.get('campaign_description'),
             row.get('discount')
         ))
 
     insert_sql = """
-        INSERT INTO dim_campaign (campaign_id, campaign_name, campaign_description, discount)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (campaign_id) DO UPDATE
-        SET campaign_name = EXCLUDED.campaign_name,
-            campaign_description = EXCLUDED.campaign_description,
-            discount = EXCLUDED.discount;
+        INSERT INTO dim_campaign (
+            campaign_id, is_duplicate, campaign_name, campaign_description, discount
+        )
+        VALUES (%s, %s, %s, %s, %s)
     """
 
     try:

@@ -18,21 +18,23 @@ def require_file(path):
 
 def main():
     require_file(FILE)
-
     df = pd.read_parquet(FILE)
+    
+    # Duplicate Logic
+    df['is_duplicate'] = df.duplicated(subset=['merchant_id'], keep='last')
     df = df.where(pd.notnull(df), None)
 
-    conn = psycopg2.connect(
-        host=PG_HOST,
-        database=PG_DB,
-        user=PG_USER,
-        password=PG_PASS
-    )
+    conn = psycopg2.connect(host=PG_HOST, database=PG_DB, user=PG_USER, password=PG_PASS)
     cur = conn.cursor()
 
+    cur.execute("DROP TABLE IF EXISTS dim_merchant CASCADE;")
+    conn.commit()
+
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS dim_merchant (
-        merchant_id varchar PRIMARY KEY,
+    CREATE TABLE dim_merchant (
+        merchant_key SERIAL PRIMARY KEY, 
+        merchant_id varchar,             
+        is_duplicate boolean,
         name varchar,
         creation_date timestamp,
         age int,
@@ -45,13 +47,11 @@ def main():
     """)
     conn.commit()
 
-    cur.execute("TRUNCATE TABLE dim_merchant CASCADE;")
-    conn.commit()
-
     rows = []
     for _, row in df.iterrows():
         rows.append((
             row.get('merchant_id'),
+            row.get('is_duplicate'),
             row.get('name'),
             row.get('creation_date'),
             row.get('age'),
@@ -64,18 +64,8 @@ def main():
 
     insert_sql = """
         INSERT INTO dim_merchant (
-            merchant_id, name, creation_date, age, street, state, city, country, contact_number
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (merchant_id) DO UPDATE
-        SET name = EXCLUDED.name,
-            creation_date = EXCLUDED.creation_date,
-            age = EXCLUDED.age,
-            street = EXCLUDED.street,
-            state = EXCLUDED.state,
-            city = EXCLUDED.city,
-            country = EXCLUDED.country,
-            contact_number = EXCLUDED.contact_number;
+            merchant_id, is_duplicate, name, creation_date, age, street, state, city, country, contact_number
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     try:
