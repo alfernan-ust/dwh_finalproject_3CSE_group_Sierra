@@ -60,9 +60,7 @@ def main():
     )
     cur = conn.cursor()
 
-    cur.execute("TRUNCATE TABLE fact_campaign_transactions CASCADE;")
-    conn.commit()
-
+    # --- FIX: Create Table BEFORE Truncating ---
     cur.execute("""
     CREATE TABLE IF NOT EXISTS fact_campaign_transactions (
         transaction_id serial PRIMARY KEY,
@@ -71,6 +69,10 @@ def main():
         availed boolean
     );
     """)
+    conn.commit()
+
+    # Now it is safe to truncate
+    cur.execute("TRUNCATE TABLE fact_campaign_transactions CASCADE;")
     conn.commit()
             
     rows = []
