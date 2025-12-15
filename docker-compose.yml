@@ -33,8 +33,8 @@ services:
       - kestra-data:/app/storage
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/kestra-wd:/tmp/kestra-wd
-      - "C:/Users/Vincent Yuri Jose/Downloads/dwh_finalproject_3CSE_group_Sierra/dataset:/dataset"
-      - "C:/Users/Vincent Yuri Jose/Downloads/dwh_finalproject_3CSE_group_Sierra/scripts:/opt/kestra/workspace"
+      - ./dataset:/dataset
+      - ./scripts:/opt/kestra/workspace
     environment:
       SECRET_POSTGRES_PASSWORD: "azNzdHI0"
       KESTRA_CONFIGURATION: |

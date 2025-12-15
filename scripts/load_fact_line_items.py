@@ -4,6 +4,8 @@ import logging
 import pandas as pd
 import psycopg2
 import psycopg2.extras
+import gc 
+
 
 LINE_PRODUCTS = "/dataset/line_item_data_products.parquet"
 LINE_PRICES   = "/dataset/line_item_data_prices.parquet"
@@ -12,16 +14,12 @@ CAMPAIGN_TXN  = "/dataset/transactional_campaign_data.parquet"
 CAMPAIGN_DIM  = "/dataset/campaign_data.parquet"
 
 PG = dict(host="postgres", database="kestra", user="kestra", password="k3str4")
-BATCH = 500
+BATCH = 1000 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 
 def require_file(path):
     if not os.path.exists(path): raise FileNotFoundError(path)
-
-def clean_str_series(s):
-    s = s.astype(object).where(s.notnull(), None)
-    return s.apply(lambda v: v.strip() if isinstance(v, str) and v.strip() != "" else None)
 
 def get_db_mapping(conn, query):
     cur = conn.cursor()
@@ -35,65 +33,85 @@ def get_db_mapping(conn, query):
         cur.close()
 
 def align_products_quantities(df_p, df_q):
-    logging.info("Aligning products...")
-    df_p = df_p.copy(); df_q = df_q.copy()
+    """
+    Aligns products and quantities by order_id using vectorized merge.
+    Faster and strictly memory efficient compared to looping.
+    """
+    logging.info("Aligning products & quantities (Vectorized)...")
     
-    df_p["order_id"] = clean_str_series(df_p["order_id"])
-    df_q["order_id"] = clean_str_series(df_q["order_id"])
+   
+    df_p['order_id'] = df_p['order_id'].astype(str).str.strip()
+    df_q['order_id'] = df_q['order_id'].astype(str).str.strip()
 
-    p_groups = df_p.groupby("order_id", sort=False).indices
-    q_groups = df_q.groupby("order_id", sort=False).indices
+  
+    df_p['pos_idx'] = df_p.groupby('order_id').cumcount()
+    df_q['pos_idx'] = df_q.groupby('order_id').cumcount()
     
-    combined_rows = []
-    order_ids = set(p_groups.keys()).union(set(q_groups.keys()))
+
+    df_aligned = pd.merge(
+        df_p[['order_id', 'pos_idx', 'product_id']], 
+        df_q[['order_id', 'pos_idx', 'quantity']], 
+        on=['order_id', 'pos_idx'], 
+        how='inner'
+    )
     
-    for oid in order_ids:
-        p_idx = p_groups.get(oid, [])
-        q_idx = q_groups.get(oid, [])
-        n = min(len(p_idx), len(q_idx))
-        p_slice = df_p.iloc[p_idx[:n]].reset_index(drop=True)
-        q_slice = df_q.iloc[q_idx[:n]].reset_index(drop=True)
-        
-        for i in range(n):
-            combined_rows.append({
-                "order_id": oid,
-                "product_id": p_slice.iloc[i].get("product_id"),
-                "quantity": q_slice.iloc[i].get("quantity"),
-            })
-            
-    df = pd.DataFrame(combined_rows)
-    df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0)
-    return df
+
+    del df_p, df_q
+    gc.collect()
+    
+    df_aligned['quantity'] = pd.to_numeric(df_aligned['quantity'], errors='coerce').fillna(0)
+    
+    return df_aligned[['order_id', 'product_id', 'quantity']]
 
 def calculate_financials(df_line):
-    logging.info("Calculating financials...")
+    logging.info("Calculating financials (Vectorized)...")
+    
+
+    price_map = {}
     if os.path.exists(PRODUCT_FILE):
         df_prod = pd.read_parquet(PRODUCT_FILE)
         df_prod['price'] = pd.to_numeric(df_prod['price'], errors='coerce').fillna(0.0)
         price_map = df_prod.set_index('product_id')['price'].to_dict()
-    else: price_map = {}
+        del df_prod
+    
 
     order_discount_map = {}
     if os.path.exists(CAMPAIGN_TXN) and os.path.exists(CAMPAIGN_DIM):
         df_ctxn = pd.read_parquet(CAMPAIGN_TXN)
         df_cdim = pd.read_parquet(CAMPAIGN_DIM)
+        
         if 'discount' in df_cdim.columns:
              df_cdim['discount'] = pd.to_numeric(
                 df_cdim['discount'].astype(str).str.replace(r'[^0-9.]', '', regex=True),
                 errors='coerce'
             ).fillna(0.0) / 100.0
         
+
         df_camp = df_ctxn.merge(df_cdim, on='campaign_id', how='left')
-        df_camp = df_camp[df_camp['availed'].apply(lambda x: str(x).lower() in ['true','1','yes','t'])]
-        for _, row in df_camp.iterrows():
-            order_discount_map[row['order_id']] = float(row.get('discount', 0))
+        
+        df_camp['availed'] = df_camp['availed'].astype(str).str.lower().isin(['true','1','yes','t'])
+        df_camp = df_camp[df_camp['availed']]
+        
+        df_camp = df_camp.drop_duplicates(subset=['order_id'])
+        
+        order_discount_map = df_camp.set_index('order_id')['discount'].to_dict()
+        del df_ctxn, df_cdim, df_camp
+        gc.collect()
 
-    def calc_row(row):
-        gross = row['quantity'] * price_map.get(row['product_id'], 0.0)
-        disc_total = gross * order_discount_map.get(row['order_id'], 0.0)
-        return pd.Series([gross, disc_total, gross - disc_total])
-
-    df_line[['gross_total', 'discount_total', 'net_total']] = df_line.apply(calc_row, axis=1)
+    logging.info("Mapping prices...")
+    df_line['unit_price'] = df_line['product_id'].map(price_map).fillna(0.0)
+    
+    logging.info("Mapping discounts...")
+    df_line['discount_rate'] = df_line['order_id'].map(order_discount_map).fillna(0.0)
+    
+    logging.info("Computing totals...")
+    df_line['gross_total'] = df_line['quantity'] * df_line['unit_price']
+    df_line['discount_total'] = df_line['gross_total'] * df_line['discount_rate']
+    df_line['net_total'] = df_line['gross_total'] - df_line['discount_total']
+    
+    df_line.drop(columns=['unit_price', 'discount_rate'], inplace=True)
+    gc.collect()
+    
     return df_line
 
 def main():
@@ -103,25 +121,33 @@ def main():
     df_q = pd.read_parquet(LINE_PRICES)
     
     df_line = align_products_quantities(df_p, df_q)
+    
+    logging.info("Flagging duplicates...")
     df_line['is_duplicate'] = df_line.duplicated(subset=['order_id', 'product_id'], keep='last')
+    
     df_line = calculate_financials(df_line)
     
+    logging.info("Connecting to DB...")
     conn = psycopg2.connect(**PG)
     
-    # Get Keys
     logging.info("Fetching surrogate keys...")
-    # Map Order Key
     order_map = get_db_mapping(conn, "SELECT order_id, order_key FROM fact_orders WHERE is_duplicate = false")
-    # Map Product Key
+    
     prod_map = get_db_mapping(conn, "SELECT product_id, product_key FROM dim_product WHERE is_duplicate = false")
     
+    logging.info("Mapping keys to dataframe...")
     df_line['order_key'] = df_line['order_id'].map(order_map).astype('Int64')
     df_line['product_key'] = df_line['product_id'].map(prod_map).astype('Int64')
     
+    before_count = len(df_line)
     df_line = df_line.dropna(subset=['order_key', 'product_key'])
+    if len(df_line) < before_count:
+        logging.warning(f"Dropped {before_count - len(df_line)} rows due to missing keys.")
+        
     df_line = df_line.where(pd.notnull(df_line), None)
 
     cur = conn.cursor()
+    logging.info("Recreating table...")
     cur.execute("DROP TABLE IF EXISTS fact_line_items CASCADE;")
     conn.commit()
     
@@ -139,12 +165,17 @@ def main():
     """)
     conn.commit()
 
+    logging.info("Inserting data...")
     rows = []
-    for _, r in df_line.iterrows():
+    for row in df_line.itertuples(index=False):
         rows.append((
-            r.get("order_key"), r.get("product_key"), r.get("quantity"),
-            r.get("gross_total"), r.get("discount_total"), r.get("net_total"),
-            r.get("is_duplicate")
+            int(row.order_key) if row.order_key is not None else None, 
+            int(row.product_key) if row.product_key is not None else None, 
+            int(row.quantity) if row.quantity is not None else None,
+            float(row.gross_total) if row.gross_total is not None else None, 
+            float(row.discount_total) if row.discount_total is not None else None, 
+            float(row.net_total) if row.net_total is not None else None,
+            bool(row.is_duplicate) if row.is_duplicate is not None else None
         ))
 
     psycopg2.extras.execute_batch(cur, """
