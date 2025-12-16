@@ -15,28 +15,26 @@ MIN_DATE_PADDING_YEARS = 1
 MAX_DATE_PADDING_YEARS = 1
 
 def require_file(path):
-    """Ensures the required input file exists."""
     if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} not found")
+        return False
+    return True
 
 def pick_col(df, candidates):
-    """Finds the first column in the DataFrame that matches a candidate name."""
     for c in candidates:
-        if c in df.columns:
-            return c
+        if c in df.columns: return c
     return None
 
 def main():
-    require_file(OUTPUT_FILE)
+    print("Loading Date Dimension...")
+    if not require_file(OUTPUT_FILE): return
     
     try:
         df_output = pd.read_parquet(OUTPUT_FILE)
     except Exception as e:
-        print(f"Error reading Parquet file: {e}", file=sys.stderr)
-        sys.exit(1)
+        print(f"Error: {e}", file=sys.stderr)
+        return
 
     output_map = {}
-    
     td_col = pick_col(df_output, ['transaction_date', 'order_date', 'created_at', 'order_ts'])
     if td_col: output_map[td_col] = 'transaction_date'
     
@@ -53,17 +51,14 @@ def main():
     date_series = pd.to_datetime(date_series, errors='coerce').dropna().dt.normalize()
 
     if date_series.empty:
-        print("No valid dates found in the Parquet file. Aborting.", file=sys.stderr)
-        return
+        start_date = date(2020, 1, 1)
+        end_date = date(2025, 12, 31)
+    else:
+        min_date = date_series.min().date()
+        max_date = date_series.max().date()
+        start_date = date(min_date.year - MIN_DATE_PADDING_YEARS, 1, 1)
+        end_date = date(max_date.year + MAX_DATE_PADDING_YEARS, 12, 31)
 
-    min_date = date_series.min().date()
-    max_date = date_series.max().date()
-    
- 
-    start_date = date(min_date.year - MIN_DATE_PADDING_YEARS, 1, 1)
-    end_date = date(max_date.year + MAX_DATE_PADDING_YEARS, 12, 31)
-
-   
     date_range = pd.date_range(start=start_date, end=end_date, freq='D')
     df_dates = pd.DataFrame({'date': date_range})
 
@@ -73,53 +68,33 @@ def main():
     df_dates['month'] = df_dates['date'].dt.month
     df_dates['month_name'] = df_dates['date'].dt.strftime('%B')
     df_dates['day'] = df_dates['date'].dt.day
-    df_dates['weekday'] = df_dates['date'].dt.weekday + 1 # 1=Monday, 7=Sunday
+    df_dates['weekday'] = df_dates['date'].dt.weekday + 1 
     df_dates['weekday_name'] = df_dates['date'].dt.strftime('%A')
-    df_dates['is_weekend'] = df_dates['date'].dt.dayofweek.isin([5, 6]) # Saturday=5, Sunday=6
+    df_dates['is_weekend'] = df_dates['date'].dt.dayofweek.isin([5, 6])
     
     cols = ['date_key', 'year', 'quarter', 'month', 'month_name', 'day', 'weekday', 'weekday_name', 'is_weekend']
-    
     df_insert = df_dates[cols].copy()
-    
-    df_insert['is_weekend'] = df_insert['is_weekend'].astype('object').where(df_insert['is_weekend'].notnull(), None)
+    df_insert['is_weekend'] = df_insert['is_weekend'].astype(bool)
     df_insert = df_insert.where(pd.notnull(df_insert), None) 
 
     conn = psycopg2.connect(host=PG_HOST, database=PG_DB, user=PG_USER, password=PG_PASS)
     cur = conn.cursor()
 
-    cur.execute("DROP TABLE IF EXISTS dim_date CASCADE;")
-    conn.commit()
-
-    cur.execute("""
-    CREATE TABLE dim_date (
-        date_key VARCHAR(10) PRIMARY KEY,
-        year INT,
-        quarter INT,
-        month INT,
-        month_name VARCHAR(50),
-        day INT,
-        weekday INT,
-        weekday_name VARCHAR(50),
-        is_weekend BOOLEAN
-    );
-    """)
-    conn.commit()
-
     rows = [tuple(row) for row in df_insert.values]
-
     insert_sql = """
     INSERT INTO dim_date (
         date_key, year, quarter, month, month_name, day, weekday, weekday_name, is_weekend
-    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s);
+    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    ON CONFLICT (date_key) DO NOTHING;
     """
 
     try:
         psycopg2.extras.execute_batch(cur, insert_sql, rows, page_size=BATCH_SIZE)
         conn.commit()
-        print(f"Successfully generated and loaded {len(rows)} continuous date records into dim_date (from {start_date} to {end_date}).")
+        print(f"Loaded {len(rows)} dates.")
     except Exception as e:
         conn.rollback()
-        print("Insert failed:", e, file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         raise
     finally:
         cur.close()
