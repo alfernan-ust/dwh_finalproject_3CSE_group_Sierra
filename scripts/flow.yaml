@@ -1,230 +1,312 @@
 id: shopzada_main_etl_pipeline
 namespace: shopzada.team
-description: "End-to-end data warehouse pipeline for ShopZada, performing parallel extraction and sequential loading based on foreign key dependencies."
+description: "Shopzada ETL with explicit Extract, Transform, and Load orchestration"
 
 tasks:
+
+
+  # Instantiate Tables
+
+  - id: CreateTables
+    type: io.kestra.plugin.scripts.python.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install psycopg2-binary
+    commands:
+      - python /opt/kestra/workspace/initiate_tables.py
+
+  # Extract
+
   - id: Extract
     type: io.kestra.plugin.core.flow.Parallel
     tasks:
-      - id: BusinessDept
+
+      - id: ExtractBusiness
         type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
         beforeCommands:
           - pip install pandas openpyxl pyarrow
-          - export PYTHONPATH=$PYTHONPATH:/opt/kestra/workspace
-        namespaceFiles:
-          enabled: true
-          include:
-            - dataframe.py
-            - business.py
+          - export PYTHONPATH=/opt/kestra/workspace
+        commands:
+          - python /opt/kestra/workspace/extract/extract_business.py
+
+      - id: ExtractCustomerManagement
+        type: io.kestra.plugin.scripts.python.Commands
         taskRunner:
           type: io.kestra.plugin.core.runner.Process
-        outputFiles:
-          - "product_list.parquet"
-        commands:
-          - python /opt/kestra/workspace/business.py
-
-      - id: CustomerManagementDept
-        type: io.kestra.plugin.scripts.python.Commands
         beforeCommands:
           - pip install pandas pyarrow
-          - export PYTHONPATH=$PYTHONPATH:/opt/kestra/workspace
-        namespaceFiles:
-          enabled: true
-          include:
-            - dataframe.py
-            - customer_management.py
+          - export PYTHONPATH=/opt/kestra/workspace
+        commands:
+          - python /opt/kestra/workspace/extract/extract_customer_management.py
+
+      - id: ExtractEnterprise
+        type: io.kestra.plugin.scripts.python.Commands
         taskRunner:
           type: io.kestra.plugin.core.runner.Process
-        outputFiles:
-          - credit_card.parquet
-          - user_data.parquet
-          - user_job.parquet
-        commands:
-          - python /opt/kestra/workspace/customer_management.py
-
-      - id: EnterpriseDepartment
-        type: io.kestra.plugin.scripts.python.Commands
         beforeCommands:
           - pip install pandas pyarrow bs4 lxml html5lib
-          - export PYTHONPATH=$PYTHONPATH:/opt/kestra/workspace
-        namespaceFiles:
-          enabled: true
-          include:
-            - dataframe.py
-            - enterprise.py
+          - export PYTHONPATH=/opt/kestra/workspace
+        commands:
+          - python /opt/kestra/workspace/extract/extract_enterprise.py
+
+      - id: ExtractMarketing
+        type: io.kestra.plugin.scripts.python.Commands
         taskRunner:
           type: io.kestra.plugin.core.runner.Process
-        outputFiles:
-          - merchant_data.parquet
-          - order_merchant_data.parquet
-          - staff_data.parquet
-        commands:
-          - python /opt/kestra/workspace/enterprise.py
-
-      - id: MarketingDepartment
-        type: io.kestra.plugin.scripts.python.Commands
         beforeCommands:
           - pip install pandas pyarrow bs4 lxml html5lib
-          - export PYTHONPATH=$PYTHONPATH:/opt/kestra/workspace
-        namespaceFiles:
-          enabled: true
-          include:
-            - dataframe.py
-            - marketing.py
+          - export PYTHONPATH=/opt/kestra/workspace
+        commands:
+          - python /opt/kestra/workspace/extract/extract_marketing.py
+
+      - id: ExtractOperations
+        type: io.kestra.plugin.scripts.python.Commands
         taskRunner:
           type: io.kestra.plugin.core.runner.Process
-        outputFiles:
-          - campaign_data.parquet
-          - transactional_campaign_data.parquet
-        commands:
-          - python /opt/kestra/workspace/marketing.py
-
-      - id: OperationsDepartment
-        type: io.kestra.plugin.scripts.python.Commands
         beforeCommands:
           - pip install pandas bs4 lxml html5lib openpyxl pyarrow
-          - export PYTHONPATH=$PYTHONPATH:/opt/kestra/workspace
-        namespaceFiles:
-          enabled: true
-          include:
-            - dataframe.py
-            - operations.py
+          - export PYTHONPATH=/opt/kestra/workspace
+        commands:
+          - python /opt/kestra/workspace/extract/extract_operations.py
+
+
+  # Transform Prepocessing
+  - id: TransformPreprocessing
+    type: io.kestra.plugin.core.flow.Parallel
+    tasks:
+
+      - id: TransformOperations
+        type: io.kestra.plugin.scripts.python.Commands
         taskRunner:
           type: io.kestra.plugin.core.runner.Process
-        outputFiles:
-          - order_product_list.parquet
-          - output_order_data.parquet
-          - order_delays.parquet
-          - order_cost.parquet
+        beforeCommands:
+          - pip install pandas pyarrow
         commands:
-          - python /opt/kestra/workspace/operations.py
-          
+          - python /opt/kestra/workspace/transform/transform_operations.py
 
-  - id: LoadDimensions
+      - id: TransformMarketing
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/transform_marketing.py
+
+      - id: TransformEnterprise
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/transform_enterprise.py
+
+      - id: TransformCustomerManagement
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/transform_customer_management.py
+
+      - id: TransformBusiness
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/transform_business.py
+
+  # Transform Dimensions 
+  - id: TransformDimensions
+    type: io.kestra.plugin.core.flow.Parallel
+    tasks:
+
+      - id: TransformDimDate
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/dim_date.py
+
+      - id: TransformDimCustomer
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/dim_customer.py
+
+      - id: TransformDimProduct
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/dim_product.py
+
+      - id: TransformDimMerchant
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/dim_merchant.py
+
+      - id: TransformDimStaff
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/dim_staff.py
+
+      - id: TransformDimCampaign
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/dim_campaign.py
+
+ 
+  # Transform Facts
+  - id: TransformFacts
     type: io.kestra.plugin.core.flow.Sequential
     tasks:
-      - id: LoadDateDim
+
+      - id: TransformFactOrders
         type: io.kestra.plugin.scripts.python.Commands
-        beforeCommands:
-          - pip install pandas pyarrow psycopg2-binary
-        namespaceFiles:
-          enabled: true
-          include:
-            - /opt/kestra/workspace/load_dim_date.py
         taskRunner:
           type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
         commands:
-          - python /opt/kestra/workspace/load_dim_date.py
-      
-      - id: LoadOtherDimensionsParallel
-        type: io.kestra.plugin.core.flow.Parallel
-        tasks:
-          - id: LoadProductDim
-            type: io.kestra.plugin.scripts.python.Commands
-            beforeCommands:
-              - pip install pandas pyarrow psycopg2-binary
-            namespaceFiles:
-              enabled: true
-              include:
-                - /opt/kestra/workspace/load_dim_product.py
-            taskRunner:
-              type: io.kestra.plugin.core.runner.Process
-            commands:
-              - python /opt/kestra/workspace/load_dim_product.py
+          - python /opt/kestra/workspace/transform/fact_orders.py
 
-          - id: LoadCustomerDim
-            type: io.kestra.plugin.scripts.python.Commands
-            beforeCommands:
-              - pip install pandas pyarrow psycopg2-binary
-            namespaceFiles:
-              enabled: true
-              include:
-                - /opt/kestra/workspace/load_dim_customer.py
-            taskRunner:
-              type: io.kestra.plugin.core.runner.Process
-            commands:
-              - python /opt/kestra/workspace/load_dim_customer.py
+      - id: TransformFactLineItems
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/fact_line_items.py
 
-          - id: LoadMerchantDim
-            type: io.kestra.plugin.scripts.python.Commands
-            beforeCommands:
-              - pip install pandas pyarrow psycopg2-binary
-            namespaceFiles:
-              enabled: true
-              include:
-                - /opt/kestra/workspace/load_dim_merchant.py
-            taskRunner:
-              type: io.kestra.plugin.core.runner.Process
-            commands:
-              - python /opt/kestra/workspace/load_dim_merchant.py
+      - id: TransformFactCampaignTransactions
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow
+        commands:
+          - python /opt/kestra/workspace/transform/fact_campaign_transactions.py
 
-          - id: LoadStaffDim
-            type: io.kestra.plugin.scripts.python.Commands
-            beforeCommands:
-              - pip install pandas pyarrow psycopg2-binary
-            namespaceFiles:
-              enabled: true
-              include:
-                - /opt/kestra/workspace/load_dim_staff.py
-            taskRunner:
-              type: io.kestra.plugin.core.runner.Process
-            commands:
-              - python /opt/kestra/workspace/load_dim_staff.py
+  
+  # Load Dimensions
+  - id: LoadDimensions
+    type: io.kestra.plugin.core.flow.Parallel
+    tasks:
 
-          - id: LoadCampaignDim
-            type: io.kestra.plugin.scripts.python.Commands
-            beforeCommands:
-              - pip install pandas pyarrow psycopg2-binary
-            namespaceFiles:
-              enabled: true
-              include:
-                - /opt/kestra/workspace/load_dim_campaign.py
-            taskRunner:
-              type: io.kestra.plugin.core.runner.Process
-            commands:
-              - python /opt/kestra/workspace/load_dim_campaign.py
-          
+      - id: LoadDimDate
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow psycopg2-binary
+        commands:
+          - python /opt/kestra/workspace/load/load_dim_date.py
+
+      - id: LoadDimCustomer
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow psycopg2-binary
+        commands:
+          - python /opt/kestra/workspace/load/load_dim_customer.py
+
+      - id: LoadDimProduct
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow psycopg2-binary
+        commands:
+          - python /opt/kestra/workspace/load/load_dim_product.py
+
+      - id: LoadDimMerchant
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow psycopg2-binary
+        commands:
+          - python /opt/kestra/workspace/load/load_dim_merchant.py
+
+      - id: LoadDimStaff
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow psycopg2-binary
+        commands:
+          - python /opt/kestra/workspace/load/load_dim_staff.py
+
+      - id: LoadDimCampaign
+        type: io.kestra.plugin.scripts.python.Commands
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow psycopg2-binary
+        commands:
+          - python /opt/kestra/workspace/load/load_dim_campaign.py
+
+  # Load Facts
   - id: LoadFacts
     type: io.kestra.plugin.core.flow.Sequential
     tasks:
+
       - id: LoadFactOrders
         type: io.kestra.plugin.scripts.python.Commands
-        beforeCommands:
-          - pip install pandas pyarrow psycopg2-binary
-        namespaceFiles:
-          enabled: true
-          include:
-            - /opt/kestra/workspace/load_fact_orders.py
         taskRunner:
           type: io.kestra.plugin.core.runner.Process
+        beforeCommands:
+          - pip install pandas pyarrow psycopg2-binary
         commands:
-          - python /opt/kestra/workspace/load_fact_orders.py
+          - python /opt/kestra/workspace/load/load_fact_orders.py
 
-      - id: LoadFactDetailsParallel
+      - id: LoadFactDetails
         type: io.kestra.plugin.core.flow.Parallel
         tasks:
-          - id: LoadFactCampaignTransactions
-            type: io.kestra.plugin.scripts.python.Commands
-            beforeCommands:
-              - pip install pandas pyarrow psycopg2-binary
-            namespaceFiles:
-              enabled: true
-              include:
-                - /opt/kestra/workspace/load_fact_campaign_transactions.py
-            taskRunner:
-              type: io.kestra.plugin.core.runner.Process
-            commands:
-              - python /opt/kestra/workspace/load_fact_campaign_transactions.py
 
           - id: LoadFactLineItems
             type: io.kestra.plugin.scripts.python.Commands
-            beforeCommands:
-              - pip install pandas pyarrow psycopg2-binary
-            namespaceFiles:
-              enabled: true
-              include:
-                - /opt/kestra/workspace/load_fact_line_items.py
             taskRunner:
               type: io.kestra.plugin.core.runner.Process
+            beforeCommands:
+              - pip install pandas pyarrow psycopg2-binary
             commands:
-              - python /opt/kestra/workspace/load_fact_line_items.py
+              - python /opt/kestra/workspace/load/load_fact_line_items.py
+
+          - id: LoadFactCampaignTransactions
+            type: io.kestra.plugin.scripts.python.Commands
+            taskRunner:
+              type: io.kestra.plugin.core.runner.Process
+            beforeCommands:
+              - pip install pandas pyarrow psycopg2-binary
+            commands:
+              - python /opt/kestra/workspace/load/load_fact_campaign_transactions.py
