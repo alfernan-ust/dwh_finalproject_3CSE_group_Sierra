@@ -10,9 +10,22 @@
 --    - is_incomplete: TRUE if any required attribute is null/missing.
 
 -- =============================================================
+-- DROP EXISTING TABLES (CASCADE to handle foreign keys)
+-- =============================================================
+DROP TABLE IF EXISTS fact_campaign_transactions CASCADE;
+DROP TABLE IF EXISTS fact_line_items CASCADE;
+DROP TABLE IF EXISTS fact_orders CASCADE;
+DROP TABLE IF EXISTS dim_campaign CASCADE;
+DROP TABLE IF EXISTS dim_staff CASCADE;
+DROP TABLE IF EXISTS dim_merchant CASCADE;
+DROP TABLE IF EXISTS dim_customer CASCADE;
+DROP TABLE IF EXISTS dim_product CASCADE;
+DROP TABLE IF EXISTS dim_date CASCADE;
+
+-- =============================================================
 -- 1. DIMENSION: DATE
 -- =============================================================
-CREATE TABLE IF NOT EXISTS dim_date (
+CREATE TABLE dim_date (
     date_key VARCHAR(10) PRIMARY KEY,
     date_actual DATE,
     
@@ -30,7 +43,7 @@ CREATE TABLE IF NOT EXISTS dim_date (
 -- =============================================================
 -- 2. DIMENSION: PRODUCT
 -- =============================================================
-CREATE TABLE IF NOT EXISTS dim_product (
+CREATE TABLE dim_product (
     product_key SERIAL PRIMARY KEY,
     product_id VARCHAR, -- Not Unique, allows history
     product_name VARCHAR,
@@ -46,7 +59,7 @@ CREATE TABLE IF NOT EXISTS dim_product (
 -- =============================================================
 -- 3. DIMENSION: CUSTOMER
 -- =============================================================
-CREATE TABLE IF NOT EXISTS dim_customer (
+CREATE TABLE dim_customer (
     customer_key SERIAL PRIMARY KEY,
     user_id VARCHAR, -- Not Unique, allows history
     name VARCHAR,
@@ -74,7 +87,7 @@ CREATE TABLE IF NOT EXISTS dim_customer (
 -- =============================================================
 -- 4. DIMENSION: MERCHANT
 -- =============================================================
-CREATE TABLE IF NOT EXISTS dim_merchant (
+CREATE TABLE dim_merchant (
     merchant_key SERIAL PRIMARY KEY,
     merchant_id VARCHAR, -- Not Unique, allows history
     name VARCHAR,
@@ -95,7 +108,7 @@ CREATE TABLE IF NOT EXISTS dim_merchant (
 -- =============================================================
 -- 5. DIMENSION: STAFF
 -- =============================================================
-CREATE TABLE IF NOT EXISTS dim_staff (
+CREATE TABLE dim_staff (
     staff_key SERIAL PRIMARY KEY,
     staff_id VARCHAR, -- Not Unique, allows history
     name VARCHAR,
@@ -117,7 +130,7 @@ CREATE TABLE IF NOT EXISTS dim_staff (
 -- =============================================================
 -- 6. DIMENSION: CAMPAIGN
 -- =============================================================
-CREATE TABLE IF NOT EXISTS dim_campaign (
+CREATE TABLE dim_campaign (
     campaign_key SERIAL PRIMARY KEY,
     campaign_id VARCHAR, -- Not Unique, allows history
     campaign_name VARCHAR,
@@ -133,7 +146,7 @@ CREATE TABLE IF NOT EXISTS dim_campaign (
 -- =============================================================
 -- 7. FACT: ORDER
 -- =============================================================
-CREATE TABLE IF NOT EXISTS fact_orders (
+CREATE TABLE fact_orders (
     order_key SERIAL PRIMARY KEY,
     order_id VARCHAR, -- Not Unique, allows status updates/history
     -- Foreign keys are nullable to allow for incomplete rows
@@ -155,7 +168,7 @@ CREATE TABLE IF NOT EXISTS fact_orders (
 -- =============================================================
 -- 8. FACT: LINE ITEMS
 -- =============================================================
-CREATE TABLE IF NOT EXISTS fact_line_items (
+CREATE TABLE fact_line_items (
     line_item_id SERIAL PRIMARY KEY,
     -- Composite Business Key would be order_id + product_id (not unique in history)
     order_key    INT REFERENCES fact_orders(order_key),
@@ -173,7 +186,7 @@ CREATE TABLE IF NOT EXISTS fact_line_items (
 -- =============================================================
 -- 9. FACT: CAMPAIGN TRANSACTIONS
 -- =============================================================
-CREATE TABLE IF NOT EXISTS fact_campaign_transactions (
+CREATE TABLE fact_campaign_transactions (
     transaction_id SERIAL PRIMARY KEY,
     -- Composite Business Key would be order_id + campaign_id
     order_key    INT REFERENCES fact_orders(order_key),

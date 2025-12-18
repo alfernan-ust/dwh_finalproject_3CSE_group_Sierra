@@ -80,6 +80,13 @@ if 'merchant_id' in df.columns:
     merch_map = dict(cur.fetchall())
     df['merchant_key'] = df['merchant_id'].map(merch_map)
 
+# staff is OPTIONAL — handle safely
+df['staff_key'] = None
+if 'staff_id' in df.columns:
+    cur.execute("SELECT staff_id, staff_key FROM dim_staff")
+    staff_map = dict(cur.fetchall())
+    df['staff_key'] = df['staff_id'].map(staff_map)
+
 # -------------------------------------------------
 # ENSURE NUMERIC FACT MEASURES EXIST
 # -------------------------------------------------
@@ -88,12 +95,34 @@ for col in ['gross_total', 'discount_total', 'net_total', 'delay_in_days']:
         df[col] = None
 
 # -------------------------------------------------
+# VALIDATE INTEGER RANGES (PostgreSQL INT limits)
+# -------------------------------------------------
+INT_MAX = 2147483647
+INT_MIN = -2147483648
+
+# Validate and fix integer columns
+for col in ['customer_key', 'merchant_key', 'staff_key', 'delay_in_days']:
+    if col in df.columns:
+        # Convert to numeric, coerce errors to NaN
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+        # Check for out of range values
+        mask = (df[col] > INT_MAX) | (df[col] < INT_MIN)
+        if mask.any():
+            print(f"[WARNING] Found {mask.sum()} out-of-range values in {col}")
+            print(f"[WARNING] Range: {df.loc[mask, col].min()} to {df.loc[mask, col].max()}")
+            # Set out of range values to None
+            df.loc[mask, col] = None
+        # Convert to nullable integer type
+        df[col] = df[col].astype('Int64')
+
+# -------------------------------------------------
 # LOAD FACT TABLE (NO DEDUPLICATION)
 # -------------------------------------------------
 cols = [
     'order_id',
     'customer_key',
     'merchant_key',
+    'staff_key',
     'transaction_date_key',
     'estimated_arrival_date_key',
     'delay_in_days',
@@ -105,7 +134,21 @@ cols = [
     'incomplete_reason'
 ]
 
-rows = df[cols].where(pd.notnull(df), None).values.tolist()
+# Convert DataFrame to list of tuples, handling pandas NA properly
+rows = []
+for idx, row in df[cols].iterrows():
+    row_data = []
+    for col in cols:
+        val = row[col]
+        # Convert pandas NA to None
+        if pd.isna(val):
+            row_data.append(None)
+        else:
+            row_data.append(val)
+    rows.append(tuple(row_data))
+
+print(f"[INFO] Inserting {len(rows)} rows into fact_orders")
+print(f"[DEBUG] Sample row: {rows[0] if rows else 'No data'}")
 
 psycopg2.extras.execute_values(
     cur,
