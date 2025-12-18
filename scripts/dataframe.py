@@ -4,7 +4,6 @@ import pickle
 import os
 
 def set_frame(item):
-  # item is a path towards a file
   df = None
   filename, extension = os.path.splitext(item)
   match(extension):

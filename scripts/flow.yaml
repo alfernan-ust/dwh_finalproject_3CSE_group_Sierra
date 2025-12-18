@@ -3,10 +3,6 @@ namespace: shopzada.team
 description: "Shopzada ETL with explicit Extract, Transform, and Load orchestration"
 
 tasks:
-
-
-  # Instantiate Tables
-
   - id: CreateTables
     type: io.kestra.plugin.scripts.python.Commands
     taskRunner:
@@ -15,8 +11,6 @@ tasks:
       - pip install psycopg2-binary
     commands:
       - python /opt/kestra/workspace/initiate_tables.py
-
-  # Extract
 
   - id: Extract
     type: io.kestra.plugin.core.flow.Parallel
@@ -73,7 +67,7 @@ tasks:
           - python /opt/kestra/workspace/extract/extract_operations.py
 
 
-  # Transform Prepocessing
+
   - id: TransformPreprocessing
     type: io.kestra.plugin.core.flow.Parallel
     tasks:
@@ -123,7 +117,7 @@ tasks:
         commands:
           - python /opt/kestra/workspace/transform/transform_business.py
 
-  # Transform Dimensions 
+
   - id: TransformDimensions
     type: io.kestra.plugin.core.flow.Parallel
     tasks:
@@ -183,7 +177,7 @@ tasks:
           - python /opt/kestra/workspace/transform/dim_campaign.py
 
  
-  # Transform Facts
+
   - id: TransformFacts
     type: io.kestra.plugin.core.flow.Sequential
     tasks:
@@ -216,7 +210,7 @@ tasks:
           - python /opt/kestra/workspace/transform/fact_campaign_transactions.py
 
   
-  # Load Dimensions
+
   - id: LoadDimensions
     type: io.kestra.plugin.core.flow.Parallel
     tasks:
@@ -275,7 +269,7 @@ tasks:
         commands:
           - python /opt/kestra/workspace/load/load_dim_campaign.py
 
-  # Load Facts
+
   - id: LoadFacts
     type: io.kestra.plugin.core.flow.Sequential
     tasks:

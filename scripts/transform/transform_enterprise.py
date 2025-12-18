@@ -6,7 +6,6 @@ def calculate_age(d):
     today = date.today()
     return today.year - d.year - ((today.month, today.day) < (d.month, d.day))
 
-# Merchant
 df = pd.read_parquet('/dataset/extracted/merchant_data.parquet')
 ages = []
 for _, r in df.iterrows():
@@ -19,7 +18,6 @@ for _, r in df.iterrows():
 df.insert(loc=2, column='age', value=ages)
 df.to_parquet('/dataset/transformed/merchant_data.parquet', index=False)
 
-# Staff
 df = pd.read_parquet('/dataset/extracted/staff_data.parquet')
 ages = []
 for _, r in df.iterrows():

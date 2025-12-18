@@ -2,16 +2,12 @@ from dataframe import set_frame, append_files
 import glob
 import os
 
-# Determine dataset path: works both in Kestra container and locally
 if os.path.exists("/dataset"):
-    # Running in Kestra container
     dataset_path = "/dataset"
 else:
-    # Running locally - get project root (two levels up from this script)
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     dataset_path = os.path.join(project_root, "dataset")
 
-# Order–Merchant
 order_merchant_data = glob.glob(os.path.join(dataset_path, "EnterpriseDepartment/order_with_merchant_data*"))
 order_merchant_data.sort()
 df = set_frame(order_merchant_data[0])
@@ -20,7 +16,6 @@ df = append_files(df, order_merchant_data)
 
 df.to_parquet(os.path.join(dataset_path, "extracted/order_merchant_data.parquet"))
 
-# Merchant Data
 merchant_data = glob.glob(os.path.join(dataset_path, "EnterpriseDepartment/merchant_data*"))
 merchant_data.sort()
 df = set_frame(merchant_data[0])
@@ -30,7 +25,6 @@ if len(merchant_data) > 1:
 
 df.to_parquet(os.path.join(dataset_path, "extracted/merchant_data.parquet"))
 
-# Staff Data
 staff_data = glob.glob(os.path.join(dataset_path, "EnterpriseDepartment/staff_data*"))
 staff_data.sort()
 df = set_frame(staff_data[0])

@@ -1,9 +1,6 @@
 import pandas as pd
 from datetime import timedelta
 
-# -------------------------------------------------
-# Collect dates from transformed facts
-# -------------------------------------------------
 sources = [
     "/dataset/transformed/fact_orders.parquet",
     "/dataset/transformed/fact_campaign_transactions.parquet"
@@ -27,17 +24,11 @@ if not dates:
 
 all_dates = pd.concat(dates).dropna()
 
-# -------------------------------------------------
-# Determine date range (+/- 1 year padding)
-# -------------------------------------------------
 min_date = all_dates.min() - pd.DateOffset(years=1)
 max_date = all_dates.max() + pd.DateOffset(years=1)
 
 date_range = pd.date_range(start=min_date, end=max_date, freq="D")
 
-# -------------------------------------------------
-# Build dim_date dataframe
-# -------------------------------------------------
 df = pd.DataFrame({"date_actual": date_range})
 
 df["date_key"] = df["date_actual"].dt.strftime("%Y-%m-%d")
@@ -49,11 +40,8 @@ df["week_of_year"] = df["date_actual"].dt.isocalendar().week.astype(int)
 df["day_name"] = df["date_actual"].dt.day_name()
 df["day_of_week"] = df["date_actual"].dt.weekday + 1
 df["is_weekend"] = df["day_of_week"].isin([6, 7])
-df["is_holiday"] = False  # placeholder
+df["is_holiday"] = False  
 
-# -------------------------------------------------
-# Final column order (MATCHES TABLE EXACTLY)
-# -------------------------------------------------
 df = df[
     [
         "date_key",
@@ -70,9 +58,6 @@ df = df[
     ]
 ]
 
-# -------------------------------------------------
-# Write output
-# -------------------------------------------------
 df.to_parquet("/dataset/transformed/dim_date.parquet", index=False)
 
 print(

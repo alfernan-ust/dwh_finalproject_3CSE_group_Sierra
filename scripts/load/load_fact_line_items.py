@@ -7,22 +7,13 @@ PG_USER = "kestra"
 PG_PASS = "k3str4"
 BATCH_SIZE = 1000
 
-# -------------------------------------------------
-# Load transformed data
-# -------------------------------------------------
 df = pd.read_parquet("/dataset/transformed/fact_line_items.parquet")
 
-# -------------------------------------------------
-# Sanity casts
-# -------------------------------------------------
 df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0).astype(int)
 
 for c in ['gross_total', 'discount_total', 'net_total']:
     df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0).round(2)
 
-# -------------------------------------------------
-# Connect to Postgres
-# -------------------------------------------------
 conn = psycopg2.connect(
     host=PG_HOST,
     database=PG_DB,
@@ -31,9 +22,6 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-# -------------------------------------------------
-# MAP SURROGATE KEYS
-# -------------------------------------------------
 cur.execute("SELECT product_id, product_key FROM dim_product")
 product_map = dict(cur.fetchall())
 
@@ -43,9 +31,6 @@ order_map = dict(cur.fetchall())
 df['product_key'] = df['product_id'].map(product_map)
 df['order_key'] = df['order_id'].map(order_map)
 
-# -------------------------------------------------
-# FINAL COLUMNS (MATCH TABLE)
-# -------------------------------------------------
 cols = [
     'order_key',
     'product_key',
@@ -60,9 +45,6 @@ cols = [
 
 rows = df[cols].where(pd.notnull(df), None).values.tolist()
 
-# -------------------------------------------------
-# INSERT
-# -------------------------------------------------
 psycopg2.extras.execute_values(
     cur,
     f"""

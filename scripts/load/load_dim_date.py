@@ -7,14 +7,8 @@ PG_USER = "kestra"
 PG_PASS = "k3str4"
 BATCH_SIZE = 1000
 
-# -------------------------------------------------
-# Load transformed dim_date
-# -------------------------------------------------
 df = pd.read_parquet("/dataset/transformed/dim_date.parquet")
 
-# -------------------------------------------------
-# Connect to Postgres
-# -------------------------------------------------
 conn = psycopg2.connect(
     host=PG_HOST,
     database=PG_DB,
@@ -23,9 +17,6 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-# -------------------------------------------------
-# Insert (idempotent)
-# -------------------------------------------------
 cols = [
     "date_key",
     "date_actual",

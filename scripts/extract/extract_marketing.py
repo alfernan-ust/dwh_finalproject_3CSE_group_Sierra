@@ -2,12 +2,9 @@ from dataframe import set_frame, append_files
 import glob
 import os
 
-# Determine dataset path: works both in Kestra container and locally
 if os.path.exists("/dataset"):
-    # Running in Kestra container
     dataset_path = "/dataset"
 else:
-    # Running locally - get project root (two levels up from this script)
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     dataset_path = os.path.join(project_root, "dataset")
 
