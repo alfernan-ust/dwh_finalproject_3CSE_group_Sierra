@@ -2,6 +2,13 @@ import pandas as pd
 
 df = pd.read_parquet("/dataset/extracted/transactional_campaign_data.parquet")
 
+# Handle empty DataFrame gracefully
+if df.empty:
+    print("Warning: Empty input data for fact_campaign_transactions. Creating empty output.")
+    pd.DataFrame().to_parquet("/dataset/transformed/fact_campaign_transactions.parquet", index=False)
+    print("[SUCCESS] fact_campaign_transactions completed (empty)")
+    exit(0)
+
 df['order_id'] = df.get('order_id').astype(str).replace({'nan': None, '': None})
 df['campaign_id'] = df.get('campaign_id').astype(str).replace({'nan': None, '': None})
 

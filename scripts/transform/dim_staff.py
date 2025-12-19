@@ -3,6 +3,13 @@ from datetime import date
 
 df = pd.read_parquet("/dataset/extracted/staff_data.parquet")
 
+# Handle empty DataFrame gracefully
+if df.empty:
+    print("Warning: Empty staff_data for dim_staff. Creating empty output.")
+    pd.DataFrame().to_parquet("/dataset/transformed/dim_staff.parquet", index=False)
+    print("[SUCCESS] dim_staff completed (empty)")
+    exit(0)
+
 df['staff_id'] = df['staff_id'].astype(str).replace({'nan': None, '': None})
 df['creation_date'] = pd.to_datetime(df['creation_date'], errors='coerce')
 
@@ -34,3 +41,4 @@ df.loc[missing_id, 'incomplete_reason'] = 'Missing ID'
 df.loc[missing_attr & ~missing_id, 'incomplete_reason'] = 'Missing Attributes'
 
 df.to_parquet("/dataset/transformed/dim_staff.parquet", index=False)
+print("[SUCCESS] dim_staff completed")

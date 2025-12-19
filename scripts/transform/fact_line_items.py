@@ -6,6 +6,13 @@ prod = pd.read_parquet("/dataset/transformed/dim_product.parquet")
 campaign_data = pd.read_parquet("/dataset/extracted/campaign_data.parquet")
 transactional_campaign = pd.read_parquet("/dataset/extracted/transactional_campaign_data.parquet")
 
+# Handle empty DataFrames gracefully
+if p.empty or q.empty:
+    print("Warning: Empty input data for fact_line_items. Creating empty output.")
+    pd.DataFrame().to_parquet("/dataset/transformed/fact_line_items.parquet", index=False)
+    print("[SUCCESS] fact_line_items completed (empty)")
+    exit(0)
+
 for df_ in [p, q, prod]:
     df_.columns = (
         df_.columns

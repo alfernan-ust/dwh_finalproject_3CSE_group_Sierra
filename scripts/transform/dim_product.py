@@ -2,6 +2,13 @@ import pandas as pd
 
 df = pd.read_parquet("/dataset/extracted/product_list.parquet")
 
+# Handle empty DataFrame gracefully
+if df.empty:
+    print("Warning: Empty product_list data for dim_product. Creating empty output.")
+    pd.DataFrame().to_parquet("/dataset/transformed/dim_product.parquet", index=False)
+    print("[SUCCESS] dim_product completed (empty)")
+    exit(0)
+
 df['product_id'] = df['product_id'].astype(str).replace({'nan': None, '': None})
 df['price'] = pd.to_numeric(
     df['price'].astype(str).str.replace(r'[^0-9.]', '', regex=True),
@@ -18,3 +25,4 @@ df['is_incomplete'] = df[required].isnull().any(axis=1)
 df['incomplete_reason'] = 'Missing Required Attributes'
 
 df.to_parquet("/dataset/transformed/dim_product.parquet", index=False)
+print("[SUCCESS] dim_product completed")

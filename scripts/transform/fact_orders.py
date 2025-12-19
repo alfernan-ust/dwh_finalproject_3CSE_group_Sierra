@@ -7,6 +7,13 @@ line_items_prices = pd.read_parquet("/dataset/extracted/line_item_data_prices.pa
 campaign_data = pd.read_parquet("/dataset/extracted/campaign_data.parquet")
 transactional_campaign = pd.read_parquet("/dataset/extracted/transactional_campaign_data.parquet")
 
+# Handle empty DataFrames gracefully
+if orders.empty or line_items_prices.empty:
+    print("Warning: Empty input data for fact_orders. Creating empty output.")
+    pd.DataFrame().to_parquet("/dataset/transformed/fact_orders.parquet", index=False)
+    print("[SUCCESS] fact_orders completed (empty)")
+    exit(0)
+
 print("ORDERS COLUMNS:", orders.columns.tolist())
 print("DELAYS COLUMNS:", delays.columns.tolist())
 print("ORDER_MERCHANT COLUMNS:", order_merchant.columns.tolist())
