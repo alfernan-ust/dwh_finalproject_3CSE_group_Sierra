@@ -63,9 +63,52 @@ if 'delay_in_days' in df.columns:
 
 df['transaction_date'] = pd.to_datetime(df['transaction_date'], errors='coerce')
 
-df['estimated_arrival_days'] = pd.to_numeric(df['estimated_arrival'], errors='coerce')
+print(f"\n[DEBUG] Columns after merge and rename: {df.columns.tolist()}")
+print(f"[DEBUG] 'estimated_arrival' in columns: {'estimated_arrival' in df.columns}")
+if 'estimated_arrival' in df.columns:
+    print(f"[DEBUG] estimated_arrival null count: {df['estimated_arrival'].isna().sum()}/{len(df)}")
+    print(f"[DEBUG] Sample estimated_arrival values: {df['estimated_arrival'].head(10).tolist()}")
 
-df['estimated_arrival'] = df['transaction_date'] + pd.to_timedelta(df['estimated_arrival_days'].fillna(0), unit='D')
+def parse_estimated_arrival(row):
+    if 'estimated_arrival' not in row.index:
+        return pd.NaT
+
+    est_arrival = row['estimated_arrival']
+    transaction_date = row['transaction_date']
+
+    if pd.isna(est_arrival) or pd.isna(transaction_date):
+        return pd.NaT
+
+    est_arrival_str = str(est_arrival).strip()
+
+    try:
+        days = float(est_arrival_str)
+        return transaction_date + pd.Timedelta(days=days)
+    except (ValueError, TypeError):
+        pass
+
+    import re
+    match = re.search(r'(\d+)', est_arrival_str)
+    if match:
+        try:
+            days = float(match.group(1))
+            return transaction_date + pd.Timedelta(days=days)
+        except (ValueError, TypeError):
+            pass
+
+    try:
+        return pd.to_datetime(est_arrival_str, errors='raise')
+    except:
+        pass
+
+    return pd.NaT
+
+if 'estimated_arrival' in df.columns:
+    print("[DEBUG] Processing estimated_arrival column...")
+    df['estimated_arrival'] = df.apply(parse_estimated_arrival, axis=1)
+else:
+    print("[WARNING] 'estimated_arrival' column not found! Setting all to NaT")
+    df['estimated_arrival'] = pd.NaT
 
 df['transaction_date_key'] = df['transaction_date'].dt.strftime('%Y-%m-%d')
 df['estimated_arrival_date_key'] = df['estimated_arrival'].dt.strftime('%Y-%m-%d')
@@ -75,7 +118,7 @@ print(f"[DEBUG] Transaction dates with NaT: {df['transaction_date'].isna().sum()
 print(f"[DEBUG] Estimated arrival dates with NaT: {df['estimated_arrival'].isna().sum()}")
 print(f"[DEBUG] Estimated arrival date keys with NULL: {df['estimated_arrival_date_key'].isna().sum()}")
 print(f"[DEBUG] Sample dates:")
-print(df[['order_id', 'transaction_date', 'estimated_arrival_days', 'estimated_arrival', 'estimated_arrival_date_key']].head(3).to_string())
+print(df[['order_id', 'transaction_date', 'estimated_arrival', 'estimated_arrival_date_key']].head(3).to_string())
 
 df = df.drop(columns=['estimated_arrival_days'], errors='ignore')
 

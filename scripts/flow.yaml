@@ -122,15 +122,6 @@ tasks:
     type: io.kestra.plugin.core.flow.Parallel
     tasks:
 
-      - id: TransformDimDate
-        type: io.kestra.plugin.scripts.python.Commands
-        taskRunner:
-          type: io.kestra.plugin.core.runner.Process
-        beforeCommands:
-          - pip install pandas pyarrow
-        commands:
-          - python /opt/kestra/workspace/transform/dim_date.py
-
       - id: TransformDimCustomer
         type: io.kestra.plugin.scripts.python.Commands
         taskRunner:
@@ -176,7 +167,7 @@ tasks:
         commands:
           - python /opt/kestra/workspace/transform/dim_campaign.py
 
- 
+
 
   - id: TransformFacts
     type: io.kestra.plugin.core.flow.Sequential
@@ -208,6 +199,15 @@ tasks:
           - pip install pandas pyarrow
         commands:
           - python /opt/kestra/workspace/transform/fact_campaign_transactions.py
+
+  - id: TransformDimDate
+    type: io.kestra.plugin.scripts.python.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install pandas pyarrow
+    commands:
+      - python /opt/kestra/workspace/transform/dim_date.py
 
   
 
