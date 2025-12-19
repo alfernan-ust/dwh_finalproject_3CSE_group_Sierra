@@ -26,7 +26,7 @@ cur = conn.cursor()
 cols = [
     'merchant_id','name','creation_date','age',
     'street','state','city','country','contact_number',
-    'is_duplicate','is_incomplete','incomplete_reason'
+    'is_duplicate','is_inferred','is_incomplete','incomplete_reason'
 ]
 
 rows = df[cols].where(pd.notnull(df), None).values.tolist()

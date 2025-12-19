@@ -27,7 +27,7 @@ cols = [
     'user_id','name','creation_date','street','state','city','country',
     'birthdate','gender','device_address','user_type','job_title','job_level',
     'credit_card_number','issuing_bank','age',
-    'is_duplicate','is_incomplete','incomplete_reason'
+    'is_duplicate','is_inferred','is_incomplete','incomplete_reason'
 ]
 
 rows = df[cols].where(pd.notnull(df), None).values.tolist()

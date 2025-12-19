@@ -178,26 +178,25 @@ for col in ['gross_total', 'discount_total', 'net_total']:
         df[col] = df[col].clip(upper=9999999999.99)
 
 df = df.sort_values(by=['order_id', 'transaction_date'])
-df['is_duplicate'] = df.duplicated(subset=['order_id'], keep='last')
 
-required = ['order_id', 'user_id', 'transaction_date_key']
-df['is_incomplete'] = df[required].isnull().any(axis=1)
+# Mark all duplicates (including the one we'll keep) to track that duplicates existed
+has_duplicates = df['order_id'].duplicated(keep=False)
+df['is_duplicate'] = has_duplicates
 
+# Check for null values in ALL fields (excluding quality flags)
+data_cols = [c for c in df.columns if c not in ['is_duplicate', 'is_incomplete', 'incomplete_reason']]
+df['is_incomplete'] = df[data_cols].isnull().any(axis=1)
+
+# Set incomplete_reason based on what's missing
 incomplete_reasons = []
 for idx, row in df.iterrows():
-    reasons = []
-    if pd.isnull(row['user_id']):
-        reasons.append('Missing user_id')
-    if pd.isnull(row['merchant_id']):
-        reasons.append('Missing merchant_id')
-    if pd.isnull(row['staff_id']):
-        reasons.append('Missing staff_id')
-
-    incomplete_reasons.append(', '.join(reasons) if reasons else None)
+    if not row['is_incomplete']:
+        incomplete_reasons.append(None)
+    else:
+        missing = [col for col in data_cols if pd.isnull(row[col])]
+        incomplete_reasons.append(f"Missing: {', '.join(missing)}")
 
 df['incomplete_reason'] = incomplete_reasons
-
-df['is_incomplete'] = df['incomplete_reason'].notna()
 
 print(f"\n[INFO] Processed {len(df)} orders")
 print(f"[INFO] Complete orders: {(~df['is_incomplete']).sum()}")

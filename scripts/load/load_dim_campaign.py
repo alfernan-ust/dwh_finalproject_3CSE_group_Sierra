@@ -25,7 +25,7 @@ cur = conn.cursor()
 
 cols = [
     'campaign_id','campaign_name','campaign_description','discount',
-    'is_duplicate','is_incomplete','incomplete_reason'
+    'is_duplicate','is_inferred','is_incomplete','incomplete_reason'
 ]
 
 rows = df[cols].where(pd.notnull(df), None).values.tolist()
