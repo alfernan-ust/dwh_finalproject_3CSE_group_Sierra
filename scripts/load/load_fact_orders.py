@@ -9,6 +9,11 @@ BATCH_SIZE = 1000
 
 df = pd.read_parquet("/dataset/transformed/fact_orders.parquet")
 
+# Handle empty DataFrame gracefully
+if df.empty:
+    print("[SUCCESS] fact_orders loaded (0 rows - empty input)")
+    exit(0)
+
 required_cols = [
     'order_id',
     'user_id',

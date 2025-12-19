@@ -9,6 +9,11 @@ BATCH_SIZE = 1000
 
 df = pd.read_parquet("/dataset/transformed/fact_campaign_transactions.parquet")
 
+# Handle empty DataFrame gracefully
+if df.empty:
+    print("[SUCCESS] fact_campaign_transactions loaded (0 rows - empty input)")
+    exit(0)
+
 conn = psycopg2.connect(host=PG_HOST, database=PG_DB, user=PG_USER, password=PG_PASS)
 cur = conn.cursor()
 

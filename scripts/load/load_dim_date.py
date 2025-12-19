@@ -9,6 +9,11 @@ BATCH_SIZE = 1000
 
 df = pd.read_parquet("/dataset/transformed/dim_date.parquet")
 
+# Handle empty DataFrame gracefully
+if df.empty:
+    print("[SUCCESS] dim_date loaded (0 rows - empty input)")
+    exit(0)
+
 conn = psycopg2.connect(
     host=PG_HOST,
     database=PG_DB,

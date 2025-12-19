@@ -9,6 +9,11 @@ BATCH_SIZE = 1000
 
 df = pd.read_parquet("/dataset/transformed/fact_line_items.parquet")
 
+# Handle empty DataFrame gracefully
+if df.empty:
+    print("[SUCCESS] fact_line_items loaded (0 rows - empty input)")
+    exit(0)
+
 df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0).astype(int)
 
 for c in ['gross_total', 'discount_total', 'net_total']:
