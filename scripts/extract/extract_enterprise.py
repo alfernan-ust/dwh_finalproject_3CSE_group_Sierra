@@ -1,35 +1,38 @@
-from dataframe import set_frame, append_files
-import glob
+from dataframe import extract_with_archiving
 import os
 
+# Determine paths based on environment
 if os.path.exists("/dataset"):
     dataset_path = "/dataset"
 else:
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     dataset_path = os.path.join(project_root, "dataset")
 
-order_merchant_data = glob.glob(os.path.join(dataset_path, "EnterpriseDepartment/order_with_merchant_data*"))
-order_merchant_data.sort()
-df = set_frame(order_merchant_data[0])
-order_merchant_data.pop(0)
-df = append_files(df, order_merchant_data)
+print("=" * 50)
+print("Extracting Enterprise Department Data")
+print("=" * 50)
 
-df.to_parquet(os.path.join(dataset_path, "extracted/order_merchant_data.parquet"))
+# Extract order_with_merchant_data
+print("\n1. Extracting order_with_merchant_data...")
+order_merchant_pattern = os.path.join(dataset_path, "EnterpriseDepartment/order_with_merchant_data*")
+order_merchant_output = os.path.join(dataset_path, "extracted/order_merchant_data.parquet")
+df_order_merchant = extract_with_archiving(order_merchant_pattern, order_merchant_output, dataset_path)
+print(f"   Rows extracted: {len(df_order_merchant)}")
 
-merchant_data = glob.glob(os.path.join(dataset_path, "EnterpriseDepartment/merchant_data*"))
-merchant_data.sort()
-df = set_frame(merchant_data[0])
-if len(merchant_data) > 1:
-    merchant_data.pop(0)
-    df = append_files(df, merchant_data)
+# Extract merchant_data
+print("\n2. Extracting merchant_data...")
+merchant_pattern = os.path.join(dataset_path, "EnterpriseDepartment/merchant_data*")
+merchant_output = os.path.join(dataset_path, "extracted/merchant_data.parquet")
+df_merchant = extract_with_archiving(merchant_pattern, merchant_output, dataset_path)
+print(f"   Rows extracted: {len(df_merchant)}")
 
-df.to_parquet(os.path.join(dataset_path, "extracted/merchant_data.parquet"))
+# Extract staff_data
+print("\n3. Extracting staff_data...")
+staff_pattern = os.path.join(dataset_path, "EnterpriseDepartment/staff_data*")
+staff_output = os.path.join(dataset_path, "extracted/staff_data.parquet")
+df_staff = extract_with_archiving(staff_pattern, staff_output, dataset_path)
+print(f"   Rows extracted: {len(df_staff)}")
 
-staff_data = glob.glob(os.path.join(dataset_path, "EnterpriseDepartment/staff_data*"))
-staff_data.sort()
-df = set_frame(staff_data[0])
-if len(staff_data) > 1:
-    staff_data.pop(0)
-    df = append_files(df, staff_data)
-
-df.to_parquet(os.path.join(dataset_path, "extracted/staff_data.parquet"))
+print("\n" + "=" * 50)
+print("Enterprise Department extraction complete")
+print("=" * 50)

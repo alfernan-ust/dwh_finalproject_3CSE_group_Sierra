@@ -1,43 +1,38 @@
-from dataframe import set_frame, append_files
-import glob
-import pandas as pd
+from dataframe import extract_with_archiving
 import os
 
+# Determine paths based on environment
 if os.path.exists("/dataset"):
     dataset_path = "/dataset"
 else:
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     dataset_path = os.path.join(project_root, "dataset")
 
-credit_card_files = glob.glob(os.path.join(dataset_path, 'CustomerManagementDepartment/user_credit_card*'))
-if not credit_card_files:
-    raise FileNotFoundError("No credit_card files found in dataset/CustomerManagementDepartment")
-df = set_frame(credit_card_files[0])
+print("=" * 50)
+print("Extracting Customer Management Department Data")
+print("=" * 50)
 
-if len(credit_card_files) > 1:
-    credit_card_files.pop(0)
-    df = append_files(df, credit_card_files)
+# Extract user_credit_card
+print("\n1. Extracting user_credit_card...")
+credit_card_pattern = os.path.join(dataset_path, "CustomerManagementDepartment/user_credit_card*")
+credit_card_output = os.path.join(dataset_path, "extracted/credit_card.parquet")
+df_credit_card = extract_with_archiving(credit_card_pattern, credit_card_output, dataset_path)
+print(f"   Rows extracted: {len(df_credit_card)}")
 
-df.to_parquet(os.path.join(dataset_path, 'extracted/credit_card.parquet'))
+# Extract user_data
+print("\n2. Extracting user_data...")
+user_data_pattern = os.path.join(dataset_path, "CustomerManagementDepartment/user_data*")
+user_data_output = os.path.join(dataset_path, "extracted/user_data.parquet")
+df_user_data = extract_with_archiving(user_data_pattern, user_data_output, dataset_path)
+print(f"   Rows extracted: {len(df_user_data)}")
 
-user_data_files = glob.glob(os.path.join(dataset_path, 'CustomerManagementDepartment/user_data*'))
-if not user_data_files:
-    raise FileNotFoundError("No user_data files found in dataset/CustomerManagementDepartment")
-df = set_frame(user_data_files[0])
+# Extract user_job
+print("\n3. Extracting user_job...")
+user_job_pattern = os.path.join(dataset_path, "CustomerManagementDepartment/user_job*")
+user_job_output = os.path.join(dataset_path, "extracted/user_job.parquet")
+df_user_job = extract_with_archiving(user_job_pattern, user_job_output, dataset_path)
+print(f"   Rows extracted: {len(df_user_job)}")
 
-if len(user_data_files) > 1:
-    user_data_files.pop(0)
-    df = append_files(df, user_data_files)
-
-df.to_parquet(os.path.join(dataset_path, 'extracted/user_data.parquet'))
-
-user_job_files = glob.glob(os.path.join(dataset_path, 'CustomerManagementDepartment/user_job*'))
-if not user_job_files:
-    raise FileNotFoundError("No user_job files found in dataset/CustomerManagementDepartment")
-df = set_frame(user_job_files[0])
-
-if len(user_job_files) > 1:
-    user_job_files.pop(0)
-    df = append_files(df, user_job_files)
-
-df.to_parquet(os.path.join(dataset_path, 'extracted/user_job.parquet'))
+print("\n" + "=" * 50)
+print("Customer Management Department extraction complete")
+print("=" * 50)

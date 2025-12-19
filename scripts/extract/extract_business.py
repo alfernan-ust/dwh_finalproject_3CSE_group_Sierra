@@ -1,7 +1,7 @@
-from dataframe import set_frame, append_files
-import glob
+from dataframe import extract_with_archiving
 import os
 
+# Determine paths based on environment
 if os.path.exists("/dataset"):
     dataset_path = "/dataset"
     workspace_path = "/opt/kestra/workspace"
@@ -10,15 +10,15 @@ else:
     dataset_path = os.path.join(project_root, "dataset")
     workspace_path = os.path.join(project_root, "scripts")
 
-product_list = glob.glob(os.path.join(dataset_path, "Business Department/product_list*"))
-if not product_list:
-    raise FileNotFoundError("No product_list files found in Business Department")
+# Extract product_list files with archiving
+print("=" * 50)
+print("Extracting Business Department: product_list")
+print("=" * 50)
 
-product_list.sort()
-df = set_frame(product_list[0])
+product_list_pattern = os.path.join(dataset_path, "Business Department/product_list*")
+product_list_output = os.path.join(dataset_path, "extracted/product_list.parquet")
 
-if len(product_list) > 1:
-    product_list.pop(0)
-    df = append_files(df, product_list)
+df = extract_with_archiving(product_list_pattern, product_list_output, dataset_path)
 
-df.to_parquet(os.path.join(dataset_path, "extracted/product_list.parquet"), index=False)
+print(f"\nExtraction complete. Total rows: {len(df)}")
+print("=" * 50)
