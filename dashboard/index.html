@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopzada Analytics Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1>📊 Shopzada Analytics Dashboard</h1>
+                <div class="header-controls">
+                    <div class="date-filter">
+                        <label for="start-date">From:</label>
+                        <input type="date" id="start-date" class="date-input" value="2023-01-01">
+                        <label for="end-date">To:</label>
+                        <input type="date" id="end-date" class="date-input" value="2023-12-31">
+                        <button class="apply-btn" onclick="applyDateFilter()">Apply Filter</button>
+                        <button class="reset-btn" onclick="resetDateFilter()">Reset</button>
+                    </div>
+                    <div class="header-info">
+                        <span id="last-updated">Last Updated: Loading...</span>
+                        <button class="refresh-btn" onclick="refreshData()">🔄 Refresh</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <nav class="tab-navigation">
+            <button class="tab-btn active" onclick="switchTab('overview')">📈 Overview</button>
+            <button class="tab-btn" onclick="switchTab('business')">🏪 Business</button>
+            <button class="tab-btn" onclick="switchTab('operations')">📦 Operations</button>
+            <button class="tab-btn" onclick="switchTab('marketing')">📢 Marketing</button>
+            <button class="tab-btn" onclick="switchTab('customer')">👥 Customer Management</button>
+            <button class="tab-btn" onclick="switchTab('enterprise')">🏢 Enterprise</button>
+            <button class="tab-btn" onclick="switchTab('tablecount')">📊 Table Counts</button>
+        </nav>
+
+        <main class="dashboard-content">
+            <div id="overview-tab" class="tab-content active">
+                <h2>Overview Dashboard</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-details">
+                            <h3>Total Revenue</h3>
+                            <p class="metric-value" id="total-revenue">Loading...</p>
+                            <span class="metric-change positive">+12.5% vs last month</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🛒</div>
+                        <div class="metric-details">
+                            <h3>Total Orders</h3>
+                            <p class="metric-value" id="total-orders">Loading...</p>
+                            <span class="metric-change positive">+8.3% vs last month</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-details">
+                            <h3>Active Customers</h3>
+                            <p class="metric-value" id="active-customers">Loading...</p>
+                            <span class="metric-change positive">+5.2% vs last month</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📦</div>
+                        <div class="metric-details">
+                            <h3>Products Sold</h3>
+                            <p class="metric-value" id="products-sold">Loading...</p>
+                            <span class="metric-change positive">+15.7% vs last month</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Revenue Trend (Last 12 Months)</h3>
+                        <canvas id="revenue-trend-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Orders by Status</h3>
+                        <canvas id="orders-status-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Top 10 Products by Revenue</h3>
+                        <canvas id="top-products-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Customer Distribution by Region</h3>
+                        <canvas id="customer-region-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="business-tab" class="tab-content">
+                <h2>Business Analytics</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">📦</div>
+                        <div class="metric-details">
+                            <h3>Total Products</h3>
+                            <p class="metric-value" id="business-total-products">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">💵</div>
+                        <div class="metric-details">
+                            <h3>Avg Product Price</h3>
+                            <p class="metric-value" id="business-avg-price">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🏆</div>
+                        <div class="metric-details">
+                            <h3>Best Selling Product</h3>
+                            <p class="metric-value small-text" id="business-best-product">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⚠️</div>
+                        <div class="metric-details">
+                            <h3>Incomplete Products</h3>
+                            <p class="metric-value" id="business-incomplete">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Products by Category</h3>
+                        <canvas id="business-category-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Price Distribution</h3>
+                        <canvas id="business-price-dist-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width">
+                    <h3>Top 20 Products by Revenue</h3>
+                    <canvas id="business-top-products-chart"></canvas>
+                </div>
+            </div>
+
+            <div id="operations-tab" class="tab-content">
+                <h2>Operations Analytics</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">📦</div>
+                        <div class="metric-details">
+                            <h3>Total Orders</h3>
+                            <p class="metric-value" id="ops-total-orders">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⏱️</div>
+                        <div class="metric-details">
+                            <h3>Avg Delivery Time</h3>
+                            <p class="metric-value" id="ops-avg-delivery">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⚠️</div>
+                        <div class="metric-details">
+                            <h3>Delayed Orders</h3>
+                            <p class="metric-value" id="ops-delayed-orders">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-details">
+                            <h3>Avg Order Value</h3>
+                            <p class="metric-value" id="ops-avg-value">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Orders by Month</h3>
+                        <canvas id="ops-monthly-orders-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Delivery Performance</h3>
+                        <canvas id="ops-delivery-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Order Value Distribution</h3>
+                        <canvas id="ops-value-dist-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Top Merchants by Orders</h3>
+                        <canvas id="ops-top-merchants-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="marketing-tab" class="tab-content">
+                <h2>Marketing Analytics</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">📢</div>
+                        <div class="metric-details">
+                            <h3>Active Campaigns</h3>
+                            <p class="metric-value" id="marketing-active-campaigns">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-details">
+                            <h3>Campaign Utilization</h3>
+                            <p class="metric-value" id="marketing-utilization">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">💸</div>
+                        <div class="metric-details">
+                            <h3>Total Discounts Given</h3>
+                            <p class="metric-value" id="marketing-discounts">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📊</div>
+                        <div class="metric-details">
+                            <h3>Avg Discount %</h3>
+                            <p class="metric-value" id="marketing-avg-discount">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Campaign Performance</h3>
+                        <canvas id="marketing-performance-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Discount Distribution</h3>
+                        <canvas id="marketing-discount-dist-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width">
+                    <h3>Campaign Effectiveness Over Time</h3>
+                    <canvas id="marketing-trend-chart"></canvas>
+                </div>
+            </div>
+
+            <div id="customer-tab" class="tab-content">
+                <h2>Customer Management Analytics</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-details">
+                            <h3>Total Customers</h3>
+                            <p class="metric-value" id="customer-total">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📍</div>
+                        <div class="metric-details">
+                            <h3>Top Region</h3>
+                            <p class="metric-value small-text" id="customer-top-region">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🎂</div>
+                        <div class="metric-details">
+                            <h3>Avg Customer Age</h3>
+                            <p class="metric-value" id="customer-avg-age">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⚖️</div>
+                        <div class="metric-details">
+                            <h3>Gender Split</h3>
+                            <p class="metric-value small-text" id="customer-gender-split">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Customers by Country</h3>
+                        <canvas id="customer-country-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Age Distribution</h3>
+                        <canvas id="customer-age-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Gender Distribution</h3>
+                        <canvas id="customer-gender-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Customer Growth Over Time</h3>
+                        <canvas id="customer-growth-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="enterprise-tab" class="tab-content">
+                <h2>Enterprise Analytics</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">🏪</div>
+                        <div class="metric-details">
+                            <h3>Total Merchants</h3>
+                            <p class="metric-value" id="enterprise-merchants">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">👔</div>
+                        <div class="metric-details">
+                            <h3>Total Staff</h3>
+                            <p class="metric-value" id="enterprise-staff">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🏆</div>
+                        <div class="metric-details">
+                            <h3>Top Merchant</h3>
+                            <p class="metric-value small-text" id="enterprise-top-merchant">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⭐</div>
+                        <div class="metric-details">
+                            <h3>Top Staff</h3>
+                            <p class="metric-value small-text" id="enterprise-top-staff">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Top 10 Merchants by Revenue</h3>
+                        <canvas id="enterprise-merchants-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Merchants by Country</h3>
+                        <canvas id="enterprise-merchant-country-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Top 10 Staff by Orders Handled</h3>
+                        <canvas id="enterprise-staff-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Staff by Job Level</h3>
+                        <canvas id="enterprise-staff-level-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tablecount-tab" class="tab-content">
+                <h2>Data Warehouse Table Counts</h2>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">📋</div>
+                        <div class="metric-details">
+                            <h3>Total Dimension Tables</h3>
+                            <p class="metric-value" id="total-dim-tables">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📊</div>
+                        <div class="metric-details">
+                            <h3>Total Fact Tables</h3>
+                            <p class="metric-value" id="total-fact-tables">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🔢</div>
+                        <div class="metric-details">
+                            <h3>Total Rows (Dims)</h3>
+                            <p class="metric-value" id="total-dim-rows">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📈</div>
+                        <div class="metric-details">
+                            <h3>Total Rows (Facts)</h3>
+                            <p class="metric-value" id="total-fact-rows">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Dimension Tables Row Counts</h3>
+                        <div class="table-container">
+                            <table class="data-table" id="dim-tables-table">
+                                <thead>
+                                    <tr>
+                                        <th>Table Name</th>
+                                        <th>Row Count</th>
+                                        <th>Incomplete Rows</th>
+                                        <th>Complete %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="4">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Fact Tables Row Counts</h3>
+                        <div class="table-container">
+                            <table class="data-table" id="fact-tables-table">
+                                <thead>
+                                    <tr>
+                                        <th>Table Name</th>
+                                        <th>Row Count</th>
+                                        <th>Incomplete Rows</th>
+                                        <th>Complete %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="4">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width">
+                    <h3>All Tables Visualization</h3>
+                    <canvas id="all-tables-chart"></canvas>
+                </div>
+            </div>
+        </main>
+
+        <footer class="dashboard-footer">
+            <p>&copy; 2025 Shopzada Analytics. Data Warehouse Project.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
