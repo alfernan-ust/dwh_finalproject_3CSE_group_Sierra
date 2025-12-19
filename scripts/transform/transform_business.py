@@ -8,6 +8,13 @@ Path(OUT).mkdir(parents=True, exist_ok=True)
 
 df = pd.read_parquet(f"{IN}/product_list.parquet")
 
+# Handle empty DataFrame gracefully
+if df.empty:
+    print("Warning: Empty product_list data. Creating empty dim_product.parquet")
+    pd.DataFrame().to_parquet(f"{OUT}/dim_product.parquet", index=False)
+    print("[SUCCESS] transform_business → dim_product.parquet (empty)")
+    exit(0)
+
 df.columns = df.columns.str.strip().str.lower()
 
 
