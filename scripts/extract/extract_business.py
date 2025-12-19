@@ -10,9 +10,9 @@ else:
     dataset_path = os.path.join(project_root, "dataset")
     workspace_path = os.path.join(project_root, "scripts")
 
-product_list = glob.glob(os.path.join(workspace_path, "notebooks/BusinessDepartment/product_list*"))
+product_list = glob.glob(os.path.join(dataset_path, "Business Department/product_list*"))
 if not product_list:
-    raise FileNotFoundError("No product_list files found in notebooks/BusinessDepartment")
+    raise FileNotFoundError("No product_list files found in Business Department")
 
 product_list.sort()
 df = set_frame(product_list[0])
