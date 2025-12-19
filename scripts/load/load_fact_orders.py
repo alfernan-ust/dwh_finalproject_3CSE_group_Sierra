@@ -81,6 +81,12 @@ for col in ['gross_total', 'discount_total', 'net_total', 'delay_in_days']:
     if col not in df.columns:
         df[col] = None
 
+# Deduplicate by order_id, keeping the last occurrence
+original_count = len(df)
+df = df.drop_duplicates(subset=['order_id'], keep='last')
+if len(df) < original_count:
+    print(f"[INFO] Removed {original_count - len(df)} duplicate order_id values")
+
 INT_MAX = 2147483647
 INT_MIN = -2147483648
 
@@ -126,7 +132,11 @@ print(f"[DEBUG] Sample row: {rows[0] if rows else 'No data'}")
 
 psycopg2.extras.execute_values(
     cur,
-    f"INSERT INTO fact_orders ({','.join(cols)}) VALUES %s",
+    f"""
+    INSERT INTO fact_orders ({','.join(cols)})
+    VALUES %s
+    ON CONFLICT (order_id) DO NOTHING
+    """,
     rows,
     page_size=BATCH_SIZE
 )

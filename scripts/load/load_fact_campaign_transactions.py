@@ -29,6 +29,7 @@ if len(missing):
         INSERT INTO dim_campaign (
             campaign_id,is_duplicate,is_inferred,is_incomplete,incomplete_reason
         ) VALUES %s
+        ON CONFLICT (campaign_id) DO NOTHING
         """,
         [(x, False, True, True, 'Inferred by Fact') for x in missing]
     )
@@ -44,6 +45,12 @@ camp_map = dict(cur.fetchall())
 df['order_key'] = df['order_id'].map(order_map)
 df['campaign_key'] = df['campaign_id'].map(camp_map)
 
+# Deduplicate by order_key and campaign_key combination
+original_count = len(df)
+df = df.drop_duplicates(subset=['order_key', 'campaign_key'], keep='last')
+if len(df) < original_count:
+    print(f"[INFO] Removed {original_count - len(df)} duplicate (order_key, campaign_key) combinations")
+
 cols = [
     'order_key','campaign_key','availed',
     'is_duplicate','is_incomplete','incomplete_reason'
@@ -53,7 +60,11 @@ rows = df[cols].where(pd.notnull(df), None).values.tolist()
 
 psycopg2.extras.execute_values(
     cur,
-    f"INSERT INTO fact_campaign_transactions ({','.join(cols)}) VALUES %s",
+    f"""
+    INSERT INTO fact_campaign_transactions ({','.join(cols)})
+    VALUES %s
+    ON CONFLICT (order_key, campaign_key) DO NOTHING
+    """,
     rows,
     page_size=BATCH_SIZE
 )
@@ -61,3 +72,5 @@ psycopg2.extras.execute_values(
 conn.commit()
 cur.close()
 conn.close()
+
+print(f"[SUCCESS] fact_campaign_transactions loaded ({len(rows)} rows)")

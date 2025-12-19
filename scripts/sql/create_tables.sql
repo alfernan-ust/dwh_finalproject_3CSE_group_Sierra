@@ -1,15 +1,7 @@
-DROP TABLE IF EXISTS fact_campaign_transactions CASCADE;
-DROP TABLE IF EXISTS fact_line_items CASCADE;
-DROP TABLE IF EXISTS fact_orders CASCADE;
-DROP TABLE IF EXISTS dim_campaign CASCADE;
-DROP TABLE IF EXISTS dim_staff CASCADE;
-DROP TABLE IF EXISTS dim_merchant CASCADE;
-DROP TABLE IF EXISTS dim_customer CASCADE;
-DROP TABLE IF EXISTS dim_product CASCADE;
-DROP TABLE IF EXISTS dim_date CASCADE;
+-- Tables will persist across ETL runs; data will be appended, not replaced
 
-CREATE TABLE dim_date (
-    date_key VARCHAR(10) PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS dim_date (
+    date_key VARCHAR(10) PRIMARY KEY UNIQUE,
     date_actual DATE,
     
     year_actual INT,
@@ -23,9 +15,9 @@ CREATE TABLE dim_date (
     is_holiday BOOLEAN
 );
 
-CREATE TABLE dim_product (
+CREATE TABLE IF NOT EXISTS dim_product (
     product_key SERIAL PRIMARY KEY,
-    product_id VARCHAR, 
+    product_id VARCHAR UNIQUE,
     product_name VARCHAR,
     product_type VARCHAR,
     price DECIMAL(10, 2),
@@ -35,9 +27,9 @@ CREATE TABLE dim_product (
     incomplete_reason TEXT
 );
 
-CREATE TABLE dim_customer (
+CREATE TABLE IF NOT EXISTS dim_customer (
     customer_key SERIAL PRIMARY KEY,
-    user_id VARCHAR, 
+    user_id VARCHAR UNIQUE,
     name VARCHAR,
     creation_date TIMESTAMP,
     street VARCHAR,
@@ -59,9 +51,9 @@ CREATE TABLE dim_customer (
     incomplete_reason TEXT
 );
 
-CREATE TABLE dim_merchant (
+CREATE TABLE IF NOT EXISTS dim_merchant (
     merchant_key SERIAL PRIMARY KEY,
-    merchant_id VARCHAR, 
+    merchant_id VARCHAR UNIQUE,
     name VARCHAR,
     creation_date TIMESTAMP,
     age INT,
@@ -76,9 +68,9 @@ CREATE TABLE dim_merchant (
     incomplete_reason TEXT
 );
 
-CREATE TABLE dim_staff (
+CREATE TABLE IF NOT EXISTS dim_staff (
     staff_key SERIAL PRIMARY KEY,
-    staff_id VARCHAR, 
+    staff_id VARCHAR UNIQUE,
     name VARCHAR,
     job_level VARCHAR,
     street VARCHAR,
@@ -94,9 +86,9 @@ CREATE TABLE dim_staff (
     incomplete_reason TEXT
 );
 
-CREATE TABLE dim_campaign (
+CREATE TABLE IF NOT EXISTS dim_campaign (
     campaign_key SERIAL PRIMARY KEY,
-    campaign_id VARCHAR, 
+    campaign_id VARCHAR UNIQUE,
     campaign_name VARCHAR,
     campaign_description VARCHAR,
     discount DECIMAL(5, 2),
@@ -106,9 +98,9 @@ CREATE TABLE dim_campaign (
     incomplete_reason TEXT
 );
 
-CREATE TABLE fact_orders (
+CREATE TABLE IF NOT EXISTS fact_orders (
     order_key SERIAL PRIMARY KEY,
-    order_id VARCHAR, 
+    order_id VARCHAR UNIQUE,
     customer_key INT REFERENCES dim_customer(customer_key),
     merchant_key INT REFERENCES dim_merchant(merchant_key),
     staff_key    INT REFERENCES dim_staff(staff_key),
@@ -123,7 +115,7 @@ CREATE TABLE fact_orders (
     incomplete_reason TEXT
 );
 
-CREATE TABLE fact_line_items (
+CREATE TABLE IF NOT EXISTS fact_line_items (
     line_item_id SERIAL PRIMARY KEY,
     order_key    INT REFERENCES fact_orders(order_key),
     product_key  INT REFERENCES dim_product(product_key),
@@ -133,15 +125,17 @@ CREATE TABLE fact_line_items (
     net_total    DECIMAL(12,2),
     is_duplicate BOOLEAN DEFAULT FALSE,
     is_incomplete BOOLEAN DEFAULT FALSE,
-    incomplete_reason TEXT
+    incomplete_reason TEXT,
+    UNIQUE(order_key, product_key)
 );
 
-CREATE TABLE fact_campaign_transactions (
+CREATE TABLE IF NOT EXISTS fact_campaign_transactions (
     transaction_id SERIAL PRIMARY KEY,
     order_key    INT REFERENCES fact_orders(order_key),
     campaign_key INT REFERENCES dim_campaign(campaign_key),
     availed      BOOLEAN,
     is_duplicate BOOLEAN DEFAULT FALSE,
     is_incomplete BOOLEAN DEFAULT FALSE,
-    incomplete_reason TEXT
+    incomplete_reason TEXT,
+    UNIQUE(order_key, campaign_key)
 );

@@ -36,6 +36,12 @@ order_map = dict(cur.fetchall())
 df['product_key'] = df['product_id'].map(product_map)
 df['order_key'] = df['order_id'].map(order_map)
 
+# Deduplicate by order_key and product_key combination
+original_count = len(df)
+df = df.drop_duplicates(subset=['order_key', 'product_key'], keep='last')
+if len(df) < original_count:
+    print(f"[INFO] Removed {original_count - len(df)} duplicate (order_key, product_key) combinations")
+
 cols = [
     'order_key',
     'product_key',
@@ -55,6 +61,7 @@ psycopg2.extras.execute_values(
     f"""
     INSERT INTO fact_line_items ({",".join(cols)})
     VALUES %s
+    ON CONFLICT (order_key, product_key) DO NOTHING
     """,
     rows,
     page_size=BATCH_SIZE

@@ -129,27 +129,32 @@ print(df[['order_id', 'transaction_date', 'estimated_arrival', 'estimated_arriva
 
 df = df.drop(columns=['estimated_arrival_days'], errors='ignore')
 
-availed_campaigns = transactional_campaign[transactional_campaign['availed'] == 1].copy()
+# Handle campaign data only if it exists and has required columns
+if not campaign_data.empty and 'campaign_id' in campaign_data.columns and 'discount' in campaign_data.columns:
+    availed_campaigns = transactional_campaign[transactional_campaign['availed'] == 1].copy()
 
-availed_campaigns = availed_campaigns.merge(
-    campaign_data[['campaign_id', 'discount']],
-    on='campaign_id',
-    how='left'
-)
+    availed_campaigns = availed_campaigns.merge(
+        campaign_data[['campaign_id', 'discount']],
+        on='campaign_id',
+        how='left'
+    )
 
-availed_campaigns['discount'] = availed_campaigns['discount'].astype(str).str.extract(r'(\d+)', expand=False)
-availed_campaigns['discount'] = pd.to_numeric(availed_campaigns['discount'], errors='coerce')
+    availed_campaigns['discount'] = availed_campaigns['discount'].astype(str).str.extract(r'(\d+)', expand=False)
+    availed_campaigns['discount'] = pd.to_numeric(availed_campaigns['discount'], errors='coerce')
 
-order_discounts = availed_campaigns.groupby('order_id').agg({
-    'discount': 'max'
-}).reset_index()
+    order_discounts = availed_campaigns.groupby('order_id').agg({
+        'discount': 'max'
+    }).reset_index()
 
-print(f"\n[DEBUG] Campaign discounts:")
-print(f"[DEBUG] Orders with campaigns: {len(order_discounts)}")
-print(f"[DEBUG] Sample order discounts:")
-print(order_discounts.head(3).to_string())
+    print(f"\n[DEBUG] Campaign discounts:")
+    print(f"[DEBUG] Orders with campaigns: {len(order_discounts)}")
+    print(f"[DEBUG] Sample order discounts:")
+    print(order_discounts.head(3).to_string())
 
-df = df.merge(order_discounts, on='order_id', how='left')
+    df = df.merge(order_discounts, on='order_id', how='left')
+else:
+    print(f"\n[DEBUG] Campaign data is empty or missing required columns, skipping campaign discount calculation")
+    df['discount'] = 0
 
 df['discount'] = pd.to_numeric(df['discount'], errors='coerce').fillna(0)
 

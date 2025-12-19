@@ -14,6 +14,12 @@ if df.empty:
     print("[SUCCESS] dim_staff loaded (0 rows - empty input)")
     exit(0)
 
+# Deduplicate by staff_id, keeping the last occurrence
+original_count = len(df)
+df = df.drop_duplicates(subset=['staff_id'], keep='last')
+if len(df) < original_count:
+    print(f"[INFO] Removed {original_count - len(df)} duplicate staff_id values")
+
 conn = psycopg2.connect(host=PG_HOST, database=PG_DB, user=PG_USER, password=PG_PASS)
 cur = conn.cursor()
 
@@ -25,9 +31,17 @@ cols = [
 
 rows = df[cols].where(pd.notnull(df), None).values.tolist()
 
+# Upsert: update existing records or insert new ones
+update_cols = [c for c in cols if c != 'staff_id']
+update_set = ', '.join([f"{c} = EXCLUDED.{c}" for c in update_cols])
+
 psycopg2.extras.execute_values(
     cur,
-    f"INSERT INTO dim_staff ({','.join(cols)}) VALUES %s",
+    f"""
+    INSERT INTO dim_staff ({','.join(cols)})
+    VALUES %s
+    ON CONFLICT (staff_id) DO UPDATE SET {update_set}
+    """,
     rows,
     page_size=BATCH_SIZE
 )
@@ -35,3 +49,5 @@ psycopg2.extras.execute_values(
 conn.commit()
 cur.close()
 conn.close()
+
+print(f"[SUCCESS] dim_staff loaded ({len(rows)} rows)")
