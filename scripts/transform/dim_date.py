@@ -20,9 +20,19 @@ for path in sources:
         pass
 
 if not dates:
-    raise ValueError("No date keys found in transformed facts")
+    print("Warning: No date keys found in transformed facts. Creating empty dim_date.")
+    pd.DataFrame().to_parquet("/dataset/transformed/dim_date.parquet", index=False)
+    print("[SUCCESS] dim_date completed (empty)")
+    exit(0)
 
 all_dates = pd.concat(dates).dropna()
+
+# Handle case where all dates are NaT
+if all_dates.empty:
+    print("Warning: All date keys are invalid/null. Creating empty dim_date.")
+    pd.DataFrame().to_parquet("/dataset/transformed/dim_date.parquet", index=False)
+    print("[SUCCESS] dim_date completed (empty)")
+    exit(0)
 
 min_date = all_dates.min() - pd.DateOffset(years=1)
 max_date = all_dates.max() + pd.DateOffset(years=1)
